@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>打字练习 + 统一键盘热力分析</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      background: linear-gradient(135deg, #eef2ff, #f8fafc);
+      color: #111827;
+      display: flex;
+      justify-content: center;
+      padding: 28px 14px;
+    }
+    .app {
+      width: min(1220px, 100%);
+      background: rgba(255,255,255,.95);
+      border: 1px solid #e5e7eb;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(15,23,42,.12);
+      overflow: hidden;
+    }
+    header {
+      padding: 26px 28px 18px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    h1 { margin: 0 0 8px; font-size: 29px; }
+    h2 { margin: 24px 0 12px; font-size: 20px; }
+    h3 { margin: 0 0 12px; font-size: 16px; }
+    .hint { margin: 0; color: #6b7280; line-height: 1.65; }
+    main { padding: 24px 28px 30px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 18px;
+    }
+    .analysis-layout {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 18px;
+      background: #fff;
+    }
+    .practice-text {
+      min-height: 110px;
+      line-height: 1.9;
+      font-size: 22px;
+      letter-spacing: .5px;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 16px;
+      background: #f9fafb;
+      word-break: break-word;
+    }
+    .char {
+      border-radius: 5px;
+      padding: 1px 2px;
+    }
+    .char.correct { background: #dcfce7; color: #166534; }
+    .char.wrong { background: #fee2e2; color: #991b1b; }
+    .char.current { background: #dbeafe; outline: 2px solid #60a5fa; }
+
+    .typing-box, .custom-text {
+      width: 100%;
+      resize: vertical;
+      border-radius: 16px;
+      border: 1px solid #d1d5db;
+      padding: 14px;
+      font-size: 16px;
+      outline: none;
+      margin-top: 12px;
+    }
+    .typing-box { min-height: 116px; }
+    .custom-text { min-height: 76px; }
+
+    .typing-box:focus, .custom-text:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 4px #e0e7ff;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .mini-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .stat {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 13px;
+    }
+    .stat .label { color: #6b7280; font-size: 13px; }
+    .stat .value { font-size: 26px; font-weight: 850; margin-top: 6px; }
+    .stat.small .value { font-size: 20px; }
+
+    .big-key {
+      min-height: 132px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #c7d2fe;
+      border-radius: 18px;
+      background: #f8faff;
+      text-align: center;
+      margin-top: 14px;
+    }
+    .key-name {
+      font-size: clamp(38px, 7vw, 76px);
+      font-weight: 850;
+      line-height: 1.05;
+      word-break: break-all;
+    }
+    .key-code { margin-top: 10px; color: #6b7280; font-size: 15px; }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 14px 0 6px;
+    }
+    button, label.toggle, select {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-weight: 750;
+      cursor: pointer;
+      background: #4f46e5;
+      color: white;
+      user-select: none;
+      font: inherit;
+    }
+    select {
+      background: #eef2ff;
+      color: #3730a3;
+      border-right: 10px solid transparent;
+    }
+    button.secondary, label.toggle {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+    button.danger { background: #ef4444; }
+    button.ok { background: #16a34a; }
+    label.toggle input { vertical-align: middle; margin-right: 6px; }
+
+    .progress {
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 13px;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #4f46e5;
+      transition: width .15s ease;
+    }
+
+    .keyboard-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .keyboard {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      overflow-x: auto;
+    }
+    .key-row {
+      display: flex;
+      gap: 7px;
+      min-width: max-content;
+    }
+    .k {
+      position: relative;
+      min-width: 44px;
+      height: 42px;
+      padding: 5px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      background: rgba(255,255,255,.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #111827;
+      box-shadow: 0 2px 0 rgba(15,23,42,.08);
+      transition: transform .05s ease, background .15s ease, border .15s ease, color .15s ease;
+    }
+    .k.wide { min-width: 70px; }
+    .k.xwide { min-width: 90px; }
+    .k.space { min-width: 260px; }
+    .k.active {
+      transform: translateY(2px);
+      border-color: #4f46e5;
+      outline: 2px solid #c7d2fe;
+    }
+    .k .count {
+      position: absolute;
+      right: 5px;
+      bottom: 3px;
+      font-size: 10px;
+      color: inherit;
+      opacity: .84;
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .legend-scale {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .scale-bar {
+      width: 120px;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: linear-gradient(90deg, #ffffff 0%, #fca5a5 35%, #ef4444 100%);
+    }
+    .scale-bar.blue {
+      background: linear-gradient(90deg, #ffffff 0%, #a5b4fc 35%, #4f46e5 100%);
+    }
+
+    .summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .summary-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #f9fafb;
+      padding: 12px 14px;
+    }
+    .summary-title {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .summary-value {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .chip.hot {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .table-wrap {
+      max-height: 360px;
+      overflow: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      background: white;
+    }
+    .small-table { max-height: 280px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #f9fafb;
+      z-index: 1;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .empty {
+      color: #9ca3af;
+      text-align: center;
+      padding: 26px;
+    }
+
+    footer {
+      color: #6b7280;
+      font-size: 13px;
+      padding-top: 14px;
+      line-height: 1.65;
+    }
+    .finish {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 750;
+    }
+
+    @media (max-width: 1020px) {
+      .grid, .analysis-layout { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      header, main { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>打字练习 + 统一键盘热力分析</h1>
+      <p class="hint">现在把“易错部位分析”和“键盘热力图”合并在一起了。切换到“错误率热力”时，打错率高的键会直接标红，不再单独分开展示。</p>
+    </header>
+
+    <main>
+      <div class="grid">
+        <section class="card">
+          <h2>练习文本</h2>
+          <div id="practiceText" class="practice-text"></div>
+          <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+          <textarea id="typingInput" class="typing-box" placeholder="点这里开始输入上面的文本..."></textarea>
+
+          <div class="controls">
+            <button id="restartPracticeBtn">重新开始练习</button>
+            <button id="randomTextBtn" class="secondary">换一段文本</button>
+            <button id="clearInputBtn" class="secondary">清空输入</button>
+          </div>
+
+          <textarea id="customText" class="custom-text" placeholder="也可以粘贴自己的练习文本，然后点“使用自定义文本”。"></textarea>
+          <div class="controls">
+            <button id="useCustomBtn" class="ok">使用自定义文本</button>
+          </div>
+
+          <div id="finishBox" class="finish"></div>
+        </section>
+
+        <section class="card">
+          <h2>实时数据</h2>
+          <div class="stats">
+            <div class="stat">
+              <div class="label">WPM</div>
+              <div id="wpm" class="value">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">正确率</div>
+              <div id="accuracy" class="value">100%</div>
+            </div>
+            <div class="stat">
+              <div class="label">错误数</div>
+              <div id="errors" class="value">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">用时</div>
+              <div id="timeUsed" class="value">0s</div>
+            </div>
+            <div class="stat">
+              <div class="label">进度</div>
+              <div id="progressText" class="value">0%</div>
+            </div>
+            <div class="stat">
+              <div class="label">总按键</div>
+              <div id="totalCount" class="value">0</div>
+            </div>
+          </div>
+
+          <div class="big-key">
+            <div id="lastKey" class="key-name">按任意键</div>
+            <div id="lastCode" class="key-code">等待输入...</div>
+          </div>
+
+          <div class="controls">
+            <button id="pauseBtn">暂停统计</button>
+            <button id="resetBtn" class="danger">清空按键统计</button>
+            <button id="copyBtn" class="secondary">复制按键结果</button>
+            <button id="csvBtn" class="secondary">导出 CSV</button>
+            <label class="toggle">
+              <input id="ignoreRepeat" type="checkbox" checked />
+              忽略长按连发
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <h2>统一键盘热力分析</h2>
+      <div class="analysis-layout">
+        <section class="card">
+          <div class="controls">
+            <select id="heatMode">
+              <option value="press">按键次数热力</option>
+              <option value="mistake">按错次数热力</option>
+              <option value="rate" selected>错误率热力</option>
+            </select>
+            <button id="resetMistakesBtn" class="danger">清空错误分析</button>
+            <button id="copyMistakesBtn" class="secondary">复制错误分析</button>
+          </div>
+
+          <div class="keyboard-wrap">
+            <div class="legend">
+              <div id="legendText">当前模式：错误率热力。越红表示这个键越容易打错。</div>
+              <div class="legend-scale">
+                <span>低</span>
+                <div id="scaleBar" class="scale-bar"></div>
+                <span>高</span>
+              </div>
+            </div>
+            <div id="keyboard" class="keyboard"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>热力分析摘要</h3>
+          <div class="mini-stats">
+            <div class="stat small">
+              <div class="label">练习按键尝试</div>
+              <div id="practiceAttempts" class="value">0</div>
+            </div>
+            <div class="stat small">
+              <div class="label">实际按错次数</div>
+              <div id="practiceMistakes" class="value">0</div>
+            </div>
+            <div class="stat small">
+              <div class="label">整体打错率</div>
+              <div id="mistakeRate" class="value">0%</div>
+            </div>
+            <div class="stat small">
+              <div class="label">最易错区域</div>
+              <div id="worstArea" class="value">-</div>
+            </div>
+          </div>
+
+          <div class="summary-list" style="margin-top:14px;">
+            <div class="summary-item">
+              <div class="summary-title">问题总结</div>
+              <div id="summaryText" class="summary-value">开始练习后，这里会总结最容易打错的键位和区域。</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-title">最常见错键组合</div>
+              <div id="topConfusions" class="chips">
+                <span class="chip">暂无数据</span>
+              </div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-title">高风险键位</div>
+              <div id="hotKeys" class="chips">
+                <span class="chip hot">暂无数据</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <h2>按键次数表</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>按键</th>
+              <th>物理键位 code</th>
+              <th>次数</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="3" class="empty">还没有记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>单键错误率排行</h2>
+      <div class="table-wrap small-table">
+        <table>
+          <thead>
+            <tr>
+              <th>应该按的键</th>
+              <th>尝试次数</th>
+              <th>打错次数</th>
+              <th>错误率</th>
+            </tr>
+          </thead>
+          <tbody id="keyErrorRateBody">
+            <tr><td colspan="4" class="empty">还没有练习数据</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer>
+        易错分析只统计“练习输入框”里的可见字符按键，不统计 Shift、Ctrl、Backspace 等功能键。错误率热力里，键越红，说明你越容易在这个目标键上打错。
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const sampleTexts = [
+      "The quick brown fox jumps over the lazy dog. Practice makes progress, not perfection.",
+      "Cith is practicing typing speed and accuracy. Keep your fingers relaxed and your rhythm steady.",
+      "Typing is easier when you slow down first. Accuracy builds speed over time.",
+      "Small mistakes often reveal weak keyboard zones. Find them, repeat them, and improve them.",
+      "Bonjour, je suis en train d'apprendre le francais. La pratique quotidienne est tres utile."
+    ];
+
+    let targetText = sampleTexts[0];
+    let startedAt = null;
+    let timerId = null;
+    let finished = false;
+
+    const counts = new Map();
+    const codeCounts = new Map();
+    let total = 0;
+    let paused = false;
+
+    const mistakeStats = {
+      attempts: 0,
+      mistakes: 0,
+      expectedAttempts: new Map(),
+      expectedMistakes: new Map(),
+      actualMistakes: new Map(),
+      areaMistakes: new Map(),
+      confusionPairs: new Map()
+    };
+
+    const practiceTextEl = document.getElementById("practiceText");
+    const typingInput = document.getElementById("typingInput");
+    const customText = document.getElementById("customText");
+    const progressBar = document.getElementById("progressBar");
+    const finishBox = document.getElementById("finishBox");
+
+    const wpmEl = document.getElementById("wpm");
+    const accuracyEl = document.getElementById("accuracy");
+    const errorsEl = document.getElementById("errors");
+    const timeUsedEl = document.getElementById("timeUsed");
+    const progressTextEl = document.getElementById("progressText");
+
+    const lastKeyEl = document.getElementById("lastKey");
+    const lastCodeEl = document.getElementById("lastCode");
+    const totalCountEl = document.getElementById("totalCount");
+    const tableBody = document.getElementById("tableBody");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const csvBtn = document.getElementById("csvBtn");
+    const ignoreRepeat = document.getElementById("ignoreRepeat");
+    const keyboardEl = document.getElementById("keyboard");
+    const heatMode = document.getElementById("heatMode");
+    const scaleBar = document.getElementById("scaleBar");
+    const legendText = document.getElementById("legendText");
+
+    const practiceAttemptsEl = document.getElementById("practiceAttempts");
+    const practiceMistakesEl = document.getElementById("practiceMistakes");
+    const mistakeRateEl = document.getElementById("mistakeRate");
+    const worstAreaEl = document.getElementById("worstArea");
+    const summaryText = document.getElementById("summaryText");
+    const topConfusions = document.getElementById("topConfusions");
+    const hotKeys = document.getElementById("hotKeys");
+    const keyErrorRateBody = document.getElementById("keyErrorRateBody");
+
+    const keyboardRows = [
+      [
+        ["Backquote","`"],["Digit1","1"],["Digit2","2"],["Digit3","3"],["Digit4","4"],["Digit5","5"],["Digit6","6"],["Digit7","7"],["Digit8","8"],["Digit9","9"],["Digit0","0"],["Minus","-"],["Equal","="],["Backspace","Backspace","wide"]
+      ],
+      [
+        ["Tab","Tab","wide"],["KeyQ","Q"],["KeyW","W"],["KeyE","E"],["KeyR","R"],["KeyT","T"],["KeyY","Y"],["KeyU","U"],["KeyI","I"],["KeyO","O"],["KeyP","P"],["BracketLeft","["],["BracketRight","]"],["Backslash","\\","wide"]
+      ],
+      [
+        ["CapsLock","Caps","xwide"],["KeyA","A"],["KeyS","S"],["KeyD","D"],["KeyF","F"],["KeyG","G"],["KeyH","H"],["KeyJ","J"],["KeyK","K"],["KeyL","L"],["Semicolon",";"],["Quote","'"],["Enter","Enter","xwide"]
+      ],
+      [
+        ["ShiftLeft","Shift","xwide"],["KeyZ","Z"],["KeyX","X"],["KeyC","C"],["KeyV","V"],["KeyB","B"],["KeyN","N"],["KeyM","M"],["Comma",","],["Period","."],["Slash","/"],["ShiftRight","Shift","xwide"]
+      ],
+      [
+        ["ControlLeft","Ctrl","wide"],["AltLeft","Alt","wide"],["Space","Space","space"],["AltRight","Alt","wide"],["ControlRight","Ctrl","wide"],["ArrowLeft","←"],["ArrowUp","↑"],["ArrowDown","↓"],["ArrowRight","→"]
+      ]
+    ];
+
+    const keyLabelByCode = new Map();
+    keyboardRows.flat().forEach(([code, label]) => keyLabelByCode.set(code, label));
+
+    const charToCode = {
+      "a":"KeyA","b":"KeyB","c":"KeyC","d":"KeyD","e":"KeyE","f":"KeyF","g":"KeyG","h":"KeyH","i":"KeyI","j":"KeyJ","k":"KeyK","l":"KeyL","m":"KeyM",
+      "n":"KeyN","o":"KeyO","p":"KeyP","q":"KeyQ","r":"KeyR","s":"KeyS","t":"KeyT","u":"KeyU","v":"KeyV","w":"KeyW","x":"KeyX","y":"KeyY","z":"KeyZ",
+      "A":"KeyA","B":"KeyB","C":"KeyC","D":"KeyD","E":"KeyE","F":"KeyF","G":"KeyG","H":"KeyH","I":"KeyI","J":"KeyJ","K":"KeyK","L":"KeyL","M":"KeyM",
+      "N":"KeyN","O":"KeyO","P":"KeyP","Q":"KeyQ","R":"KeyR","S":"KeyS","T":"KeyT","U":"KeyU","V":"KeyV","W":"KeyW","X":"KeyX","Y":"KeyY","Z":"KeyZ",
+      "1":"Digit1","2":"Digit2","3":"Digit3","4":"Digit4","5":"Digit5","6":"Digit6","7":"Digit7","8":"Digit8","9":"Digit9","0":"Digit0",
+      "`":"Backquote","~":"Backquote","-":"Minus","_":"Minus","=":"Equal","+":"Equal",
+      "[":"BracketLeft","{":"BracketLeft","]":"BracketRight","}":"BracketRight","\\":"Backslash","|":"Backslash",
+      ";":"Semicolon",":":"Semicolon","'":"Quote",'"':"Quote",",":"Comma","<":"Comma",".":"Period",">":"Period","/":"Slash","?":"Slash",
+      " ":"Space"
+    };
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeKey(e) {
+      if (e.key === " ") return "Space";
+      if (e.key === "Escape") return "Esc";
+      if (e.key.length === 1) return e.key;
+      return e.key;
+    }
+
+    function isPrintableKey(e) {
+      return e.key.length === 1 || e.key === " ";
+    }
+
+    function inc(map, key, amount = 1) {
+      map.set(key, (map.get(key) || 0) + amount);
+    }
+
+    function labelForChar(ch) {
+      if (ch === " ") return "Space";
+      if (ch === "\n") return "Enter";
+      return ch;
+    }
+
+    function labelForCode(code) {
+      return keyLabelByCode.get(code) || code || "-";
+    }
+
+    function expectedCodeForChar(ch) {
+      return charToCode[ch] || null;
+    }
+
+    function getArea(code) {
+      if (!code) return "未知区域";
+
+      if (["Digit1","Digit2","Digit3","Digit4","Digit5","Backquote"].includes(code)) return "左手数字区";
+      if (["Digit6","Digit7","Digit8","Digit9","Digit0","Minus","Equal","Backspace"].includes(code)) return "右手数字区";
+
+      if (["KeyQ","KeyW","KeyE","KeyR","KeyT"].includes(code)) return "左手上排";
+      if (["KeyY","KeyU","KeyI","KeyO","KeyP","BracketLeft","BracketRight","Backslash"].includes(code)) return "右手上排";
+
+      if (["KeyA","KeyS","KeyD","KeyF","KeyG","CapsLock"].includes(code)) return "左手中排";
+      if (["KeyH","KeyJ","KeyK","KeyL","Semicolon","Quote","Enter"].includes(code)) return "右手中排";
+
+      if (["KeyZ","KeyX","KeyC","KeyV","KeyB","ShiftLeft"].includes(code)) return "左手下排";
+      if (["KeyN","KeyM","Comma","Period","Slash","ShiftRight"].includes(code)) return "右手下排";
+
+      if (code === "Space") return "拇指空格区";
+      if (code.includes("Arrow")) return "方向键区";
+      return "功能键区";
+    }
+
+    function renderPractice() {
+      const typed = typingInput.value;
+      let html = "";
+
+      for (let i = 0; i < targetText.length; i++) {
+        const targetChar = targetText[i];
+        let cls = "char";
+
+        if (i < typed.length) {
+          cls += typed[i] === targetChar ? " correct" : " wrong";
+        } else if (i === typed.length) {
+          cls += " current";
+        }
+
+        const shown = targetChar === " " ? "&nbsp;" : escapeHtml(targetChar);
+        html += `<span class="${cls}">${shown}</span>`;
+      }
+
+      practiceTextEl.innerHTML = html;
+    }
+
+    function startTimerOnce() {
+      if (startedAt !== null) return;
+      startedAt = Date.now();
+      timerId = setInterval(updatePracticeStats, 200);
+    }
+
+    function getElapsedSeconds() {
+      if (startedAt === null) return 0;
+      return Math.max(0, (Date.now() - startedAt) / 1000);
+    }
+
+    function analyzeTyping() {
+      const typed = typingInput.value;
+      let correct = 0;
+      let errors = 0;
+
+      for (let i = 0; i < typed.length; i++) {
+        if (typed[i] === targetText[i]) correct++;
+        else errors++;
+      }
+
+      const typedLen = typed.length;
+      const elapsed = getElapsedSeconds();
+      const minutes = elapsed / 60;
+      const wpm = minutes > 0 ? Math.round((correct / 5) / minutes) : 0;
+      const accuracy = typedLen > 0 ? Math.round((correct / typedLen) * 100) : 100;
+      const progress = targetText.length > 0 ? Math.min(100, Math.round((typedLen / targetText.length) * 100)) : 0;
+
+      return { typed, typedLen, correct, errors, elapsed, wpm, accuracy, progress };
+    }
+
+    function updatePracticeStats() {
+      const s = analyzeTyping();
+      wpmEl.textContent = s.wpm;
+      accuracyEl.textContent = s.accuracy + "%";
+      errorsEl.textContent = s.errors;
+      timeUsedEl.textContent = Math.floor(s.elapsed) + "s";
+      progressTextEl.textContent = s.progress + "%";
+      progressBar.style.width = s.progress + "%";
+
+      if (!finished && s.typedLen >= targetText.length) {
+        finished = true;
+        clearInterval(timerId);
+        finishBox.style.display = "block";
+        finishBox.textContent = `完成！WPM：${s.wpm}，正确率：${s.accuracy}%，错误数：${s.errors}，用时：${Math.floor(s.elapsed)} 秒。`;
+      }
+    }
+
+    function resetPractice(keepText = true) {
+      typingInput.value = "";
+      startedAt = null;
+      finished = false;
+      clearInterval(timerId);
+      timerId = null;
+      finishBox.style.display = "none";
+      if (!keepText) targetText = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+      renderPractice();
+      updatePracticeStats();
+      typingInput.focus();
+    }
+
+    function resetMistakeStats() {
+      mistakeStats.attempts = 0;
+      mistakeStats.mistakes = 0;
+      mistakeStats.expectedAttempts.clear();
+      mistakeStats.expectedMistakes.clear();
+      mistakeStats.actualMistakes.clear();
+      mistakeStats.areaMistakes.clear();
+      mistakeStats.confusionPairs.clear();
+      renderMistakeAnalysis();
+      updateKeyboardHeat();
+    }
+
+    function recordPracticeMistake(e) {
+      if (document.activeElement !== typingInput) return;
+      if (!isPrintableKey(e)) return;
+
+      const pos = typingInput.selectionStart;
+      if (pos === null || pos >= targetText.length) return;
+
+      const expectedChar = targetText[pos];
+      const actualChar = e.key;
+      const expectedCode = expectedCodeForChar(expectedChar);
+      const expectedLabel = labelForChar(expectedChar);
+      const actualLabel = labelForChar(actualChar);
+      const actualCode = e.code || "Unknown";
+
+      mistakeStats.attempts++;
+      inc(mistakeStats.expectedAttempts, expectedCode || expectedLabel);
+
+      if (actualChar !== expectedChar) {
+        mistakeStats.mistakes++;
+        inc(mistakeStats.expectedMistakes, expectedCode || expectedLabel);
+        inc(mistakeStats.actualMistakes, actualCode);
+
+        const area = getArea(expectedCode || actualCode);
+        inc(mistakeStats.areaMistakes, area);
+
+        const pairKey = `${expectedLabel}@@${actualLabel}`;
+        if (!mistakeStats.confusionPairs.has(pairKey)) {
+          mistakeStats.confusionPairs.set(pairKey, { expected: expectedLabel, actual: actualLabel, count: 0 });
+        }
+        mistakeStats.confusionPairs.get(pairKey).count++;
+      }
+
+      renderMistakeAnalysis();
+    }
+
+    function getSortedRows() {
+      return [...counts.entries()]
+        .map(([id, item]) => item)
+        .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+    }
+
+    function buildKeyboard() {
+      keyboardEl.innerHTML = keyboardRows.map(row => `
+        <div class="key-row">
+          ${row.map(([code, label, width]) => `
+            <div class="k ${width || ""}" data-code="${code}">
+              <span>${escapeHtml(label)}</span>
+              <span class="count">0</span>
+            </div>
+          `).join("")}
+        </div>
+      `).join("");
+    }
+
+    function updateKeyboardHeat() {
+      let valueByCode = new Map();
+      let textByCode = new Map();
+      const mode = heatMode.value;
+
+      if (mode === "press") {
+        valueByCode = codeCounts;
+        for (const [code, val] of codeCounts.entries()) {
+          textByCode.set(code, String(val));
+        }
+        scaleBar.classList.add("blue");
+        legendText.textContent = "当前模式：按键次数热力。越蓝表示这个键按得越多。";
+      } else if (mode === "mistake") {
+        valueByCode = mistakeStats.actualMistakes;
+        for (const [code, val] of mistakeStats.actualMistakes.entries()) {
+          textByCode.set(code, String(val));
+        }
+        scaleBar.classList.remove("blue");
+        legendText.textContent = "当前模式：按错次数热力。越红表示这个键被误按得越多。";
+      } else {
+        for (const [expectedKey, attempts] of mistakeStats.expectedAttempts.entries()) {
+          const code = expectedKey.startsWith("Key") || expectedKey.startsWith("Digit") || expectedKey === "Space" ? expectedKey : expectedCodeForChar(expectedKey);
+          if (!code) continue;
+          const wrong = mistakeStats.expectedMistakes.get(expectedKey) || 0;
+          const rate = attempts > 0 ? wrong / attempts : 0;
+          valueByCode.set(code, rate);
+          textByCode.set(code, rate ? Math.round(rate * 100) + "%" : "0");
+        }
+        scaleBar.classList.remove("blue");
+        legendText.textContent = "当前模式：错误率热力。越红表示这个目标键越容易被你打错。";
+      }
+
+      const max = Math.max(1, ...valueByCode.values());
+
+      document.querySelectorAll(".k").forEach(keyEl => {
+        const code = keyEl.dataset.code;
+        const value = valueByCode.get(code) || 0;
+        const displayText = textByCode.get(code) || "0";
+        const countEl = keyEl.querySelector(".count");
+        countEl.textContent = displayText;
+
+        if (value === 0) {
+          keyEl.style.background = "rgba(255,255,255,.96)";
+          keyEl.style.color = "#111827";
+          return;
+        }
+
+        let ratio = mode === "rate" ? value : value / max;
+        ratio = Math.min(1, ratio);
+
+        const alpha = 0.16 + ratio * 0.68;
+        const rgb = mode === "press" ? "79, 70, 229" : "239, 68, 68";
+        keyEl.style.background = `rgba(${rgb}, ${alpha})`;
+        keyEl.style.color = ratio > 0.55 ? "white" : "#111827";
+      });
+    }
+
+    function flashKey(code) {
+      const el = document.querySelector(`.k[data-code="${CSS.escape(code)}"]`);
+      if (!el) return;
+      el.classList.add("active");
+      setTimeout(() => el.classList.remove("active"), 120);
+    }
+
+    function renderKeyStats() {
+      const rows = getSortedRows();
+      totalCountEl.textContent = total;
+
+      if (!rows.length) {
+        tableBody.innerHTML = '<tr><td colspan="3" class="empty">还没有记录</td></tr>';
+        updateKeyboardHeat();
+        return;
+      }
+
+      tableBody.innerHTML = rows.map(row => `
+        <tr>
+          <td><strong>${escapeHtml(row.key)}</strong></td>
+          <td>${escapeHtml(row.code)}</td>
+          <td>${row.count}</td>
+        </tr>
+      `).join("");
+
+      updateKeyboardHeat();
+    }
+
+    function renderMistakeAnalysis() {
+      const attempts = mistakeStats.attempts;
+      const mistakes = mistakeStats.mistakes;
+      const rate = attempts ? Math.round((mistakes / attempts) * 100) : 0;
+
+      practiceAttemptsEl.textContent = attempts;
+      practiceMistakesEl.textContent = mistakes;
+      mistakeRateEl.textContent = rate + "%";
+
+      const areas = [...mistakeStats.areaMistakes.entries()].sort((a, b) => b[1] - a[1]);
+      const worstArea = areas[0]?.[0] || "-";
+      worstAreaEl.textContent = worstArea;
+
+      const topExpected = [...mistakeStats.expectedMistakes.entries()].sort((a,b)=>b[1]-a[1])[0];
+      const topActual = [...mistakeStats.actualMistakes.entries()].sort((a,b)=>b[1]-a[1])[0];
+
+      if (!attempts) {
+        summaryText.textContent = "开始练习后，这里会总结最容易打错的键位和区域。";
+      } else {
+        const parts = [];
+        if (worstArea !== "-") parts.push(`你最容易出错的区域是「${worstArea}」`);
+        if (topExpected) parts.push(`最常打错的目标键是「${labelForCode(topExpected[0])}」`);
+        if (topActual) parts.push(`最常误按到的键是「${labelForCode(topActual[0])}」`);
+        summaryText.textContent = parts.join("，") + "。建议先慢速专练该区域相邻键，再逐渐提速。";
+      }
+
+      const pairs = [...mistakeStats.confusionPairs.values()].sort((a,b)=>b.count-a.count).slice(0, 6);
+      if (!pairs.length) {
+        topConfusions.innerHTML = '<span class="chip">暂无数据</span>';
+      } else {
+        topConfusions.innerHTML = pairs.map(p =>
+          `<span class="chip hot">${escapeHtml(p.expected)} → ${escapeHtml(p.actual)} × ${p.count}</span>`
+        ).join("");
+      }
+
+      const keyRates = [...mistakeStats.expectedAttempts.entries()].map(([key, count]) => {
+        const wrong = mistakeStats.expectedMistakes.get(key) || 0;
+        const rate = count ? wrong / count : 0;
+        return { key, count, wrong, rate };
+      }).filter(x => x.count > 0).sort((a,b) => b.rate - a.rate || b.wrong - a.wrong).slice(0, 8);
+
+      if (!keyRates.length) {
+        hotKeys.innerHTML = '<span class="chip hot">暂无数据</span>';
+        keyErrorRateBody.innerHTML = '<tr><td colspan="4" class="empty">还没有练习数据</td></tr>';
+      } else {
+        hotKeys.innerHTML = keyRates.map(r =>
+          `<span class="chip hot">${escapeHtml(labelForCode(r.key))} · ${Math.round(r.rate * 100)}%</span>`
+        ).join("");
+
+        keyErrorRateBody.innerHTML = keyRates.map(r => `
+          <tr>
+            <td><strong>${escapeHtml(labelForCode(r.key))}</strong></td>
+            <td>${r.count}</td>
+            <td>${r.wrong}</td>
+            <td>${Math.round(r.rate * 100)}%</td>
+          </tr>
+        `).join("");
+      }
+
+      updateKeyboardHeat();
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (paused) return;
+      if (ignoreRepeat.checked && e.repeat) return;
+
+      const key = normalizeKey(e);
+      const code = e.code || "Unknown";
+      const id = `${key}@@${code}`;
+
+      if (!counts.has(id)) counts.set(id, { key, code, count: 0 });
+      counts.get(id).count++;
+      codeCounts.set(code, (codeCounts.get(code) || 0) + 1);
+      total++;
+
+      lastKeyEl.textContent = key;
+      lastCodeEl.textContent = `key: ${key} / code: ${code}`;
+      flashKey(code);
+      renderKeyStats();
+
+      recordPracticeMistake(e);
+    });
+
+    typingInput.addEventListener("input", () => {
+      startTimerOnce();
+      renderPractice();
+      updatePracticeStats();
+    });
+
+    document.getElementById("restartPracticeBtn").addEventListener("click", () => resetPractice(true));
+    document.getElementById("clearInputBtn").addEventListener("click", () => resetPractice(true));
+    document.getElementById("randomTextBtn").addEventListener("click", () => resetPractice(false));
+
+    document.getElementById("useCustomBtn").addEventListener("click", () => {
+      const text = customText.value.trim();
+      if (!text) return;
+      targetText = text;
+      resetPractice(true);
+    });
+
+    pauseBtn.addEventListener("click", () => {
+      paused = !paused;
+      pauseBtn.textContent = paused ? "继续统计" : "暂停统计";
+      pauseBtn.classList.toggle("secondary", paused);
+      lastCodeEl.textContent = paused ? "按键统计已暂停，练习输入仍可继续" : "继续检测中...";
+    });
+
+    resetBtn.addEventListener("click", () => {
+      counts.clear();
+      codeCounts.clear();
+      total = 0;
+      lastKeyEl.textContent = "按任意键";
+      lastCodeEl.textContent = "等待输入...";
+      renderKeyStats();
+    });
+
+    document.getElementById("resetMistakesBtn").addEventListener("click", resetMistakeStats);
+
+    document.getElementById("copyMistakesBtn").addEventListener("click", async () => {
+      const areas = [...mistakeStats.areaMistakes.entries()].sort((a,b)=>b[1]-a[1]).map(([area,count]) => `${area}: ${count}`).join("\n");
+      const pairs = [...mistakeStats.confusionPairs.values()].sort((a,b)=>b.count-a.count).map(p => `${p.expected} -> ${p.actual}: ${p.count}`).join("\n");
+      const hot = [...mistakeStats.expectedAttempts.entries()].map(([key, count]) => {
+        const wrong = mistakeStats.expectedMistakes.get(key) || 0;
+        const rate = count ? Math.round(wrong / count * 100) : 0;
+        return `${labelForCode(key)}: ${rate}% (${wrong}/${count})`;
+      }).join("\n");
+
+      const text = [
+        `练习按键尝试: ${mistakeStats.attempts}`,
+        `实际按错次数: ${mistakeStats.mistakes}`,
+        `整体打错率: ${mistakeStats.attempts ? Math.round((mistakeStats.mistakes / mistakeStats.attempts) * 100) : 0}%`,
+        `最易错区域: ${worstAreaEl.textContent}`,
+        "",
+        "区域统计:",
+        areas || "暂无",
+        "",
+        "错键组合:",
+        pairs || "暂无",
+        "",
+        "单键错误率:",
+        hot || "暂无"
+      ].join("\n");
+
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById("copyMistakesBtn");
+      btn.textContent = "已复制";
+      setTimeout(() => btn.textContent = "复制错误分析", 900);
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const text = getSortedRows()
+        .map(row => `${row.key}\t${row.code}\t${row.count}`)
+        .join("\n");
+      await navigator.clipboard.writeText(text || "暂无记录");
+      copyBtn.textContent = "已复制";
+      setTimeout(() => copyBtn.textContent = "复制按键结果", 900);
+    });
+
+    csvBtn.addEventListener("click", () => {
+      const rows = [["key", "code", "count"], ...getSortedRows().map(r => [r.key, r.code, r.count])];
+      const csv = rows.map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "key-counts.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    heatMode.addEventListener("change", updateKeyboardHeat);
+
+    buildKeyboard();
+    renderPractice();
+    renderKeyStats();
+    renderMistakeAnalysis();
+    updatePracticeStats();
+  </script>
+</body>
+</html>
