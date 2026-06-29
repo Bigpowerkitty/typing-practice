@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>打字练习 + 统一键盘热力分析</title>
+  <title>打字练习 + 统一键盘热力分析 + 真正铺满版</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -39,6 +39,12 @@
       grid-template-columns: 1.05fr .95fr;
       gap: 18px;
     }
+    .top-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) 390px;
+      gap: 18px;
+      align-items: start;
+    }
     .analysis-layout {
       display: grid;
       grid-template-columns: 1.1fr .9fr;
@@ -68,6 +74,7 @@
     }
     .char.correct { background: #dcfce7; color: #166534; }
     .char.wrong { background: #fee2e2; color: #991b1b; }
+    .char.corrected { background: #fef3c7; color: #92400e; }
     .char.current { background: #dbeafe; outline: 2px solid #60a5fa; }
 
     .typing-box, .custom-text {
@@ -93,6 +100,10 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
     }
+    .stats.compact {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
     .mini-stats {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -107,6 +118,16 @@
     .stat .label { color: #6b7280; font-size: 13px; }
     .stat .value { font-size: 26px; font-weight: 850; margin-top: 6px; }
     .stat.small .value { font-size: 20px; }
+    .stats.compact .stat {
+      padding: 10px 12px;
+    }
+    .stats.compact .stat .label {
+      font-size: 12px;
+    }
+    .stats.compact .stat .value {
+      font-size: 22px;
+      margin-top: 4px;
+    }
 
     .big-key {
       min-height: 132px;
@@ -120,8 +141,20 @@
       text-align: center;
       margin-top: 14px;
     }
+    .big-key.compact {
+      margin-top: 0;
+      min-height: 208px;
+      padding: 12px;
+    }
+    .inline-title {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 700;
+      margin-bottom: 8px;
+      align-self: flex-start;
+    }
     .key-name {
-      font-size: clamp(38px, 7vw, 76px);
+      font-size: clamp(34px, 6vw, 72px);
       font-weight: 850;
       line-height: 1.05;
       word-break: break-all;
@@ -134,6 +167,15 @@
       flex-wrap: wrap;
       align-items: center;
       margin: 14px 0 6px;
+    }
+    .compact-controls {
+      margin-top: 12px;
+    }
+    .realtime-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
     }
     button, label.toggle, select {
       border: 0;
@@ -324,6 +366,284 @@
       padding: 26px;
     }
 
+
+
+    .adaptive-panel {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .adaptive-box {
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      border-radius: 14px;
+      padding: 11px 12px;
+    }
+    .adaptive-box .label {
+      color: #6b7280;
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    .adaptive-box .value {
+      font-weight: 900;
+      font-size: 18px;
+      color: #111827;
+    }
+    .adaptive-tip {
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      color: #1e3a8a;
+      border-radius: 14px;
+      padding: 10px 12px;
+      line-height: 1.65;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 760px) {
+      .adaptive-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 10px 0 14px;
+    }
+    .history-summary {
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0 0 12px;
+    }
+    .text-snippet {
+      max-width: 520px;
+      color: #374151;
+      white-space: normal;
+      line-height: 1.8;
+      word-break: break-word;
+    }
+    .history-text {
+      max-width: 520px;
+      color: #374151;
+      white-space: normal;
+      line-height: 1.9;
+      word-break: break-word;
+    }
+    .history-text .char {
+      display: inline-block;
+      min-width: .5em;
+      margin: 1px 0;
+    }
+    .history-text, .history-text * {
+      white-space: normal !important;
+    }
+
+
+
+    /* 摘要下置：统一键盘热力分析采用上下结构 */
+    .keyboard-analysis-layout,
+    .heatmap-layout,
+    .heat-analysis-layout,
+    .analysis-layout {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+      align-items: start;
+    }
+
+    .heat-summary,
+    .analysis-summary,
+    .summary-panel,
+    #heatSummaryPanel {
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    .summary-grid,
+    .heat-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-block-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .summary-block-grid .card,
+    .summary-block-grid .summary-card,
+    .summary-block-grid .analysis-card {
+      height: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .summary-grid,
+      .heat-summary-grid,
+      .summary-block-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .summary-grid,
+      .heat-summary-grid,
+      .summary-block-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    #heatSummaryPanel > h3,
+    #heatSummaryPanel > h2 {
+      margin-bottom: 12px;
+    }
+
+    #heatSummaryPanel .summary-grid {
+      margin-bottom: 12px;
+    }
+
+    #heatSummaryPanel .insight-list,
+    #heatSummaryPanel .summary-details,
+    #heatSummaryPanel .analysis-details {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 900px) {
+      #heatSummaryPanel .insight-list,
+      #heatSummaryPanel .summary-details,
+      #heatSummaryPanel .analysis-details {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    #heatSummaryPanel {
+      width: 100%;
+    }
+
+    #heatSummaryPanel .mini-stats {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 12px !important;
+    }
+
+    #heatSummaryPanel .summary-list {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 12px !important;
+      margin-top: 14px !important;
+    }
+
+    #heatSummaryPanel .summary-item {
+      margin: 0 !important;
+      height: 100%;
+    }
+
+    @media (max-width: 900px) {
+      #heatSummaryPanel .mini-stats,
+      #heatSummaryPanel .summary-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+    }
+
+    @media (max-width: 560px) {
+      #heatSummaryPanel .mini-stats,
+      #heatSummaryPanel .summary-list {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+
+    /* 真正作用到当前键盘结构：.key-row / .k */
+    .keyboard-wrap {
+      width: 100% !important;
+    }
+
+    .keyboard {
+      width: 100% !important;
+      max-width: none !important;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
+    }
+
+    .key-row {
+      display: flex !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      gap: 8px !important;
+    }
+
+    .k {
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
+      width: auto !important;
+      box-sizing: border-box !important;
+      padding-left: 6px !important;
+      padding-right: 6px !important;
+    }
+
+    .k.wide {
+      flex-grow: 1.55 !important;
+    }
+
+    .k.xwide {
+      flex-grow: 2.05 !important;
+    }
+
+    .k.space {
+      flex-grow: 7.2 !important;
+    }
+
+    .k[data-code="Backspace"] {
+      flex-grow: 2.05 !important;
+    }
+
+    .k[data-code="Tab"],
+    .k[data-code="Backslash"] {
+      flex-grow: 1.55 !important;
+    }
+
+    .k[data-code="CapsLock"],
+    .k[data-code="Enter"] {
+      flex-grow: 2.05 !important;
+    }
+
+    .k[data-code="ShiftLeft"],
+    .k[data-code="ShiftRight"] {
+      flex-grow: 2.25 !important;
+    }
+
+    .k[data-code="ControlLeft"],
+    .k[data-code="ControlRight"],
+    .k[data-code="AltLeft"],
+    .k[data-code="AltRight"] {
+      flex-grow: 1.45 !important;
+    }
+
+    .k[data-code="Space"] {
+      flex-grow: 7.6 !important;
+    }
+
+    @media (max-width: 900px) {
+      .key-row {
+        gap: 5px !important;
+      }
+
+      .k {
+        font-size: 12px !important;
+        padding-left: 3px !important;
+        padding-right: 3px !important;
+      }
+    }
+
     footer {
       color: #6b7280;
       font-size: 13px;
@@ -341,9 +661,125 @@
       font-weight: 750;
     }
 
+    .lock-note {
+      margin-top: 10px;
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-size: 13px;
+      display: none;
+    }
+    .correction-note {
+      margin-top: 10px;
+      color: #92400e;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      display: none;
+    }
+
+    .toast-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .toast-stack:empty {
+      display: none;
+      margin-bottom: 0;
+    }
+    .mistake-toast {
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+      border-radius: 18px;
+      box-shadow: 0 12px 28px rgba(153, 27, 27, .16);
+      padding: 14px 16px;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .mistake-toast.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .mistake-toast.leaving {
+      opacity: 0;
+      transform: translateY(-10px) scale(.98);
+    }
+    .mistake-toast-row {
+      display: flex;
+      align-items: stretch;
+      gap: 16px;
+      flex-wrap: nowrap;
+    }
+    .mistake-text-block {
+      flex: 0 0 160px;
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .mistake-toast-title {
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+    .mistake-toast-detail {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .mistake-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: #fff;
+      border: 1px solid #fecaca;
+      font-weight: 800;
+    }
+    .mistake-big {
+      font-size: 24px;
+      line-height: 1;
+    }
+    .relation-visual {
+      margin-top: 0;
+      background: #fff;
+      border: 1px solid #fecaca;
+      border-radius: 16px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 150px;
+    }
+    .relation-visual svg {
+      display: block;
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+    }
+
+
+
     @media (max-width: 1020px) {
-      .grid, .analysis-layout { grid-template-columns: 1fr; }
+      .grid, .analysis-layout, .top-layout { grid-template-columns: 1fr; }
       .stats { grid-template-columns: repeat(2, 1fr); }
+      .realtime-panel { grid-template-columns: 1fr; }
+      .mistake-toast-row { flex-wrap: wrap; }
+      .mistake-text-block { min-width: 0; width: 100%; flex-basis: auto; }
+      .relation-visual { width: 100%; min-height: 0; }
       header, main { padding-left: 18px; padding-right: 18px; }
     }
   </style>
@@ -351,22 +787,55 @@
 <body>
   <div class="app">
     <header>
-      <h1>打字练习 + 统一键盘热力分析</h1>
-      <p class="hint">现在把“易错部位分析”和“键盘热力图”合并在一起了。切换到“错误率热力”时，打错率高的键会直接标红，不再单独分开展示。</p>
+      <h1>打字练习 + 统一键盘热力分析 + 真正铺满版</h1>
+      <p class="hint">练习输入框已开启防回退模式，并支持一次改正机会。第一次打错会计入错误率；后续改正成功不会把该位置算作正确率。</p>
     </header>
 
     <main>
-      <div class="grid">
-        <section class="card">
+      <div id="toastStack" class="toast-stack"></div>
+      <div class="top-layout">
+        <section class="card practice-card">
           <h2>练习文本</h2>
           <div id="practiceText" class="practice-text"></div>
           <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+
+          <div class="adaptive-panel">
+            <div class="adaptive-box">
+              <div class="label">当前难度</div>
+              <div id="difficultyLevel" class="value">Level 1</div>
+            </div>
+            <div class="adaptive-box">
+              <div class="label">难度主题</div>
+              <div id="difficultyName" class="value">基础短句</div>
+            </div>
+            <div class="adaptive-box">
+              <div class="label">易错键</div>
+              <div id="weakKeysText" class="value">暂无</div>
+            </div>
+            <div class="adaptive-box">
+              <div class="label">升级目标</div>
+              <div id="levelGoalText" class="value">95% / WPM 20</div>
+            </div>
+          </div>
+
           <textarea id="typingInput" class="typing-box" placeholder="点这里开始输入上面的文本..."></textarea>
+          <div id="lockNote" class="lock-note">防回退模式：不能删除、粘贴、撤销或移动光标修改前面的内容。</div>
+          <div id="correctionNote" class="correction-note">改正机会：请按正确键继续。</div>
 
           <div class="controls">
             <button id="restartPracticeBtn">重新开始练习</button>
-            <button id="randomTextBtn" class="secondary">换一段文本</button>
+            <button id="randomTextBtn" class="secondary">换一段同级文本</button>
+            <button id="weakTextBtn" class="secondary">生成易错键专项文本</button>
+            <button id="levelUpTextBtn" class="secondary">生成高一级文本</button>
             <button id="clearInputBtn" class="secondary">清空输入</button>
+            <label class="toggle">
+              <input id="autoLevelToggle" type="checkbox" checked />
+              自动升降难度
+            </label>
+            <label class="toggle">
+              <input id="autoNextToggle" type="checkbox" checked />
+              完成后自动下一段
+            </label>
           </div>
 
           <textarea id="customText" class="custom-text" placeholder="也可以粘贴自己的练习文本，然后点“使用自定义文本”。"></textarea>
@@ -377,41 +846,52 @@
           <div id="finishBox" class="finish"></div>
         </section>
 
-        <section class="card">
+        <section class="card side-card">
           <h2>实时数据</h2>
-          <div class="stats">
-            <div class="stat">
-              <div class="label">WPM</div>
-              <div id="wpm" class="value">0</div>
+          <div class="realtime-panel">
+            <div class="big-key compact">
+              <div class="inline-title">实时按键</div>
+              <div id="lastKey" class="key-name">按任意键</div>
+              <div id="lastCode" class="key-code">等待输入...</div>
             </div>
-            <div class="stat">
-              <div class="label">正确率</div>
-              <div id="accuracy" class="value">100%</div>
-            </div>
-            <div class="stat">
-              <div class="label">错误数</div>
-              <div id="errors" class="value">0</div>
-            </div>
-            <div class="stat">
-              <div class="label">用时</div>
-              <div id="timeUsed" class="value">0s</div>
-            </div>
-            <div class="stat">
-              <div class="label">进度</div>
-              <div id="progressText" class="value">0%</div>
-            </div>
-            <div class="stat">
-              <div class="label">总按键</div>
-              <div id="totalCount" class="value">0</div>
+
+            <div class="stats compact">
+              <div class="stat">
+                <div class="label">WPM</div>
+                <div id="wpm" class="value">0</div>
+              </div>
+              <div class="stat">
+                <div class="label">正确率</div>
+                <div id="accuracy" class="value">100%</div>
+              </div>
+              <div class="stat">
+                <div class="label">错误数</div>
+                <div id="errors" class="value">0</div>
+              </div>
+              <div class="stat">
+                <div class="label">用时</div>
+                <div id="timeUsed" class="value">0s</div>
+              </div>
+              <div class="stat">
+                <div class="label">进度</div>
+                <div id="progressText" class="value">0%</div>
+              </div>
+              <div class="stat">
+                <div class="label">总按键</div>
+                <div id="totalCount" class="value">0</div>
+              </div>
+              <div class="stat">
+                <div class="label">改正成功</div>
+                <div id="correctionSuccess" class="value">0</div>
+              </div>
+              <div class="stat">
+                <div class="label">改正率</div>
+                <div id="correctionRate" class="value">0%</div>
+              </div>
             </div>
           </div>
 
-          <div class="big-key">
-            <div id="lastKey" class="key-name">按任意键</div>
-            <div id="lastCode" class="key-code">等待输入...</div>
-          </div>
-
-          <div class="controls">
+          <div class="controls compact-controls">
             <button id="pauseBtn">暂停统计</button>
             <button id="resetBtn" class="danger">清空按键统计</button>
             <button id="copyBtn" class="secondary">复制按键结果</button>
@@ -419,6 +899,14 @@
             <label class="toggle">
               <input id="ignoreRepeat" type="checkbox" checked />
               忽略长按连发
+            </label>
+            <label class="toggle">
+              <input id="soundToggle" type="checkbox" checked />
+              打错声音提示
+            </label>
+            <label class="toggle">
+              <input id="correctionToggle" type="checkbox" checked />
+              打错给一次改正
             </label>
           </div>
         </section>
@@ -450,9 +938,9 @@
           </div>
         </section>
 
-        <section class="card">
+        <section id="heatSummaryPanel" class="card heat-summary-panel">
           <h3>热力分析摘要</h3>
-          <div class="mini-stats">
+          <div class="mini-stats summary-grid">
             <div class="stat small">
               <div class="label">练习按键尝试</div>
               <div id="practiceAttempts" class="value">0</div>
@@ -492,6 +980,35 @@
         </section>
       </div>
 
+      <h2>练习历史</h2>
+      <section class="card">
+        <p id="historySummary" class="history-summary">完成一轮练习后会自动记录。练习文本中：红色=最终打错，黄色=曾打错但后来改正。正确率采用首错口径：第一次打错后即使改正，也不算正确。历史记录保存在本机浏览器中，不会上传。</p>
+        <div class="history-actions">
+          <button id="clearHistoryBtn" class="danger">清空练习历史</button>
+          <button id="exportHistoryBtn" class="secondary">导出历史 CSV</button>
+        </div>
+        <div class="table-wrap small-table">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>WPM</th>
+                <th>正确率</th>
+                <th>错误数</th>
+                <th>用时</th>
+                <th>改正成功</th>
+                <th>改正率</th>
+                <th>整体打错率</th>
+                <th>练习文本</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="9" class="empty">还没有练习历史</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <h2>按键次数表</h2>
       <div class="table-wrap">
         <table>
@@ -526,7 +1043,7 @@
       </div>
 
       <footer>
-        易错分析只统计“练习输入框”里的可见字符按键，不统计 Shift、Ctrl、Backspace 等功能键。错误率热力里，键越红，说明你越容易在这个目标键上打错。
+        易错分析只统计“练习输入框”里的可见字符按键。练习框开启防回退模式，不能删除、粘贴、撤销或移动光标修改前文。打错时会新增放大的提示条；默认开启“一次改正”。统计采用首错口径：第一次打错计入错误率，改正成功只计入改正率，不会反过来提高正确率。完成后会自动切到下一段。
       </footer>
     </main>
   </div>
@@ -539,6 +1056,57 @@
       "Small mistakes often reveal weak keyboard zones. Find them, repeat them, and improve them.",
       "Bonjour, je suis en train d'apprendre le francais. La pratique quotidienne est tres utile."
     ];
+
+    const levelInfo = {
+      1: { name: "基础短句", goalWpm: 20, goalAccuracy: 92, desc: "短句、常见字母、少量标点" },
+      2: { name: "常用长句", goalWpm: 28, goalAccuracy: 94, desc: "更长句子、更多连贯单词" },
+      3: { name: "大小写标点", goalWpm: 35, goalAccuracy: 95, desc: "大小写、逗号、句号、问号" },
+      4: { name: "数字符号", goalWpm: 42, goalAccuracy: 96, desc: "数字、符号、混合输入" },
+      5: { name: "弱点专项", goalWpm: 50, goalAccuracy: 97, desc: "根据易错键生成高强度训练" }
+    };
+
+    const levelTextBank = {
+      1: [
+        "cat dog sun moon red blue green. type slow and stay calm.",
+        "the fox can run and jump. keep your hands relaxed.",
+        "a small step each day can build speed and accuracy."
+      ],
+      2: [
+        "Typing is easier when you slow down first. Accuracy builds speed over time.",
+        "Practice with steady rhythm. Do not rush the keys, and let your hands stay light.",
+        "Every short session can show you which keys need more attention."
+      ],
+      3: [
+        "Hello, Cith! Can you type this sentence clearly, quickly, and carefully?",
+        "Accuracy first, speed second: this is the safest way to improve.",
+        "When you make a mistake, pause for a second, then continue with control."
+      ],
+      4: [
+        "Level 4: type 12345, then 67890; use commas, periods, and question marks?",
+        "Order #2048 costs $39.90, but the backup code is A7-K9-Q2.",
+        "Mix words + numbers: user_42 scored 98%, retry_count = 3."
+      ],
+      5: [
+        "Precision training begins now: focus on weak keys, repeat them, and stay accurate.",
+        "Hard mode: quick shifts, mixed symbols, numbers 1024 and 4096, plus punctuation!",
+        "Final drill: speed is useful only when your accuracy remains stable."
+      ]
+    };
+
+    const neighborByCode = {
+      KeyQ: ["KeyW","KeyA"], KeyW: ["KeyQ","KeyE","KeyS"], KeyE: ["KeyW","KeyR","KeyD"], KeyR: ["KeyE","KeyT","KeyF"], KeyT: ["KeyR","KeyY","KeyG"],
+      KeyY: ["KeyT","KeyU","KeyH"], KeyU: ["KeyY","KeyI","KeyJ"], KeyI: ["KeyU","KeyO","KeyK"], KeyO: ["KeyI","KeyP","KeyL"], KeyP: ["KeyO","BracketLeft","Semicolon"],
+      KeyA: ["KeyQ","KeyS","KeyZ"], KeyS: ["KeyA","KeyD","KeyW","KeyX"], KeyD: ["KeyS","KeyF","KeyE","KeyC"], KeyF: ["KeyD","KeyG","KeyR","KeyV"],
+      KeyG: ["KeyF","KeyH","KeyT","KeyB"], KeyH: ["KeyG","KeyJ","KeyY","KeyN"], KeyJ: ["KeyH","KeyK","KeyU","KeyM"], KeyK: ["KeyJ","KeyL","KeyI","Comma"],
+      KeyL: ["KeyK","Semicolon","KeyO","Period"], Semicolon: ["KeyL","Quote","KeyP","Slash"],
+      KeyZ: ["KeyA","KeyX"], KeyX: ["KeyZ","KeyC","KeyS"], KeyC: ["KeyX","KeyV","KeyD"], KeyV: ["KeyC","KeyB","KeyF"], KeyB: ["KeyV","KeyN","KeyG"],
+      KeyN: ["KeyB","KeyM","KeyH"], KeyM: ["KeyN","Comma","KeyJ"], Comma: ["KeyM","Period","KeyK"], Period: ["Comma","Slash","KeyL"], Slash: ["Period","Semicolon"],
+      Digit1: ["Digit2","KeyQ"], Digit2: ["Digit1","Digit3","KeyW"], Digit3: ["Digit2","Digit4","KeyE"], Digit4: ["Digit3","Digit5","KeyR"], Digit5: ["Digit4","Digit6","KeyT"],
+      Digit6: ["Digit5","Digit7","KeyY"], Digit7: ["Digit6","Digit8","KeyU"], Digit8: ["Digit7","Digit9","KeyI"], Digit9: ["Digit8","Digit0","KeyO"], Digit0: ["Digit9","Minus","KeyP"],
+      Space: ["KeyV","KeyB","KeyN","KeyM"]
+    };
+
+
 
     let targetText = sampleTexts[0];
     let startedAt = null;
@@ -560,8 +1128,21 @@
       confusionPairs: new Map()
     };
 
+    let correctionPending = null;
+    let correctionSuccessCount = 0;
+    let sessionSaved = false;
+    const correctedPositions = new Set();
+    const firstMistakePositions = new Set();
+    const HISTORY_KEY = "typingPracticeHistory.v1";
+    const DIFFICULTY_KEY = "typingPracticeDifficulty.v1";
+    let currentLevel = Number(localStorage.getItem(DIFFICULTY_KEY) || "1");
+    currentLevel = Math.max(1, Math.min(5, currentLevel));
+    let autoNextTimer = null;
+
     const practiceTextEl = document.getElementById("practiceText");
     const typingInput = document.getElementById("typingInput");
+    const lockNote = document.getElementById("lockNote");
+    const correctionNote = document.getElementById("correctionNote");
     const customText = document.getElementById("customText");
     const progressBar = document.getElementById("progressBar");
     const finishBox = document.getElementById("finishBox");
@@ -581,6 +1162,11 @@
     const copyBtn = document.getElementById("copyBtn");
     const csvBtn = document.getElementById("csvBtn");
     const ignoreRepeat = document.getElementById("ignoreRepeat");
+    const soundToggle = document.getElementById("soundToggle");
+    const correctionToggle = document.getElementById("correctionToggle");
+    const correctionSuccessEl = document.getElementById("correctionSuccess");
+    const correctionRateEl = document.getElementById("correctionRate");
+    const toastStack = document.getElementById("toastStack");
     const keyboardEl = document.getElementById("keyboard");
     const heatMode = document.getElementById("heatMode");
     const scaleBar = document.getElementById("scaleBar");
@@ -594,6 +1180,18 @@
     const topConfusions = document.getElementById("topConfusions");
     const hotKeys = document.getElementById("hotKeys");
     const keyErrorRateBody = document.getElementById("keyErrorRateBody");
+    const historyBody = document.getElementById("historyBody");
+    const historySummary = document.getElementById("historySummary");
+    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+    const exportHistoryBtn = document.getElementById("exportHistoryBtn");
+    const difficultyLevelEl = document.getElementById("difficultyLevel");
+    const difficultyNameEl = document.getElementById("difficultyName");
+    const weakKeysTextEl = document.getElementById("weakKeysText");
+    const levelGoalTextEl = document.getElementById("levelGoalText");
+    const weakTextBtn = document.getElementById("weakTextBtn");
+    const levelUpTextBtn = document.getElementById("levelUpTextBtn");
+    const autoLevelToggle = document.getElementById("autoLevelToggle");
+    const autoNextToggle = document.getElementById("autoNextToggle");
 
     const keyboardRows = [
       [
@@ -615,6 +1213,14 @@
 
     const keyLabelByCode = new Map();
     keyboardRows.flat().forEach(([code, label]) => keyLabelByCode.set(code, label));
+
+    const keyPositionByCode = new Map();
+    keyboardRows.forEach((row, rowIndex) => {
+      row.forEach(([code], colIndex) => {
+        keyPositionByCode.set(code, { row: rowIndex, col: colIndex });
+      });
+    });
+
 
     const charToCode = {
       "a":"KeyA","b":"KeyB","c":"KeyC","d":"KeyD","e":"KeyE","f":"KeyF","g":"KeyG","h":"KeyH","i":"KeyI","j":"KeyJ","k":"KeyK","l":"KeyL","m":"KeyM",
@@ -686,6 +1292,400 @@
       return "功能键区";
     }
 
+
+
+    let audioCtx = null;
+    const TOAST_DURATION_MS = 5000;
+    const MAX_VISIBLE_TOASTS = 3;
+
+    function playMistakeSound() {
+      if (!soundToggle.checked) return;
+
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        oscillator.type = "square";
+        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(130, audioCtx.currentTime + 0.12);
+
+        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.14);
+
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.15);
+      } catch (err) {
+        // 浏览器不支持或阻止音频时，静默跳过，不影响练习。
+      }
+    }
+
+    function getRelationVisual(expectedCode, actualCode, expectedLabel, actualLabel) {
+      const svgEscape = (s) => String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+      const sameCode = expectedCode && actualCode && expectedCode === actualCode;
+      const gradientId = "grad_" + Math.random().toString(36).slice(2, 9);
+
+      function keyWidth(type) {
+        if (type === "wide") return 36;
+        if (type === "xwide") return 46;
+        if (type === "space") return 132;
+        return 24;
+      }
+
+      function miniLabel(label) {
+        const map = {
+          "Backspace": "⌫",
+          "Enter": "↵",
+          "Shift": "⇧",
+          "Tab": "⇥",
+          "Caps": "Caps",
+          "Space": "Space",
+          "Ctrl": "Ctrl",
+          "Alt": "Alt"
+        };
+        if (map[label]) return map[label];
+        if (label.length > 5) return label.slice(0, 4);
+        return label;
+      }
+
+      const gap = 5;
+      const rowGap = 7;
+      const keyH = 24;
+      const padX = 12;
+      const padY = 12;
+
+      const rowWidths = keyboardRows.map(row =>
+        row.reduce((sum, [, , width]) => sum + keyWidth(width) + gap, 0) - gap
+      );
+
+      const contentW = Math.max(...rowWidths);
+      const contentH = keyboardRows.length * keyH + (keyboardRows.length - 1) * rowGap;
+      const width = contentW + padX * 2;
+      const height = contentH + padY * 2;
+
+      let rowsSvg = "";
+
+      keyboardRows.forEach((row, rowIndex) => {
+        let x = padX + (contentW - rowWidths[rowIndex]) / 2;
+        const y = padY + rowIndex * (keyH + rowGap);
+
+        row.forEach(([code, label, widthType]) => {
+          const w = keyWidth(widthType);
+          const tx = x + w / 2;
+          const ty = y + keyH / 2 + 3.2;
+
+          let fill = "#ffffff";
+          let stroke = "#d1d5db";
+          let textColor = "#6b7280";
+          let extra = "";
+
+          if (sameCode && code === expectedCode) {
+            fill = `url(#${gradientId})`;
+            stroke = "#f59e0b";
+            textColor = "#92400e";
+            extra += `<circle cx="${x + 5}" cy="${y + 5}" r="2.4" fill="#22c55e"></circle>`;
+            extra += `<circle cx="${x + w - 5}" cy="${y + 5}" r="2.4" fill="#ef4444"></circle>`;
+          } else if (code === expectedCode) {
+            fill = "#dcfce7";
+            stroke = "#22c55e";
+            textColor = "#166534";
+          } else if (code === actualCode) {
+            fill = "#fee2e2";
+            stroke = "#ef4444";
+            textColor = "#991b1b";
+          }
+
+          rowsSvg += `
+            <g>
+              <rect x="${x}" y="${y}" width="${w}" height="${keyH}" rx="5" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>
+              <text x="${tx}" y="${ty}" text-anchor="middle" font-size="8.3" font-weight="800" fill="${textColor}">${svgEscape(miniLabel(label))}</text>
+              ${extra}
+            </g>
+          `;
+
+          x += w + gap;
+        });
+      });
+
+      return `
+        <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#dcfce7"></stop>
+              <stop offset="50%" stop-color="#fef3c7"></stop>
+              <stop offset="100%" stop-color="#fee2e2"></stop>
+            </linearGradient>
+          </defs>
+          <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="14" fill="#fff7f7" stroke="#fecaca"/>
+          ${rowsSvg}
+        </svg>
+      `;
+    }
+
+    function showMistakeToast(expected, actual, expectedCode, actualCode) {
+      const toast = document.createElement("div");
+      toast.className = "mistake-toast";
+      toast.innerHTML = `
+        <div class="mistake-toast-row">
+          <div class="mistake-text-block">
+            <div class="mistake-toast-title">打错了！</div>
+            <div class="mistake-toast-detail">
+              <span class="mistake-pill">✅ <span class="mistake-big">${escapeHtml(expected)}</span></span>
+              <span class="mistake-pill">❌ <span class="mistake-big">${escapeHtml(actual)}</span></span>
+            </div>
+          </div>
+          <div class="relation-visual">${getRelationVisual(expectedCode, actualCode, expected, actual)}</div>
+        </div>
+      `;
+
+      toastStack.prepend(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.add("show");
+      });
+
+      while (toastStack.children.length > MAX_VISIBLE_TOASTS) {
+        const last = toastStack.lastElementChild;
+        last.classList.add("leaving");
+        setTimeout(() => last.remove(), 180);
+      }
+
+      setTimeout(() => {
+        toast.classList.add("leaving");
+        setTimeout(() => toast.remove(), 220);
+      }, TOAST_DURATION_MS);
+    }
+
+    function alertMistake(expected, actual, expectedCode, actualCode) {
+      showMistakeToast(expected, actual, expectedCode, actualCode);
+      playMistakeSound();
+    }
+
+    function showLockNote(message) {
+      lockNote.textContent = message || "防回退模式：不能删除、粘贴、撤销或移动光标修改前面的内容。";
+      lockNote.style.display = "block";
+      clearTimeout(showLockNote._timer);
+      showLockNote._timer = setTimeout(() => {
+        lockNote.style.display = "none";
+      }, 1500);
+    }
+
+    function showCorrectionNote(message, keepVisible = false) {
+      correctionNote.textContent = message || "改正机会：请按正确键继续。";
+      correctionNote.style.display = "block";
+      clearTimeout(showCorrectionNote._timer);
+      if (!keepVisible) {
+        showCorrectionNote._timer = setTimeout(() => {
+          correctionNote.style.display = "none";
+        }, 1800);
+      }
+    }
+
+    function hideCorrectionNote() {
+      clearTimeout(showCorrectionNote._timer);
+      correctionNote.style.display = "none";
+    }
+
+    function moveCaretToEnd() {
+      const end = typingInput.value.length;
+      try {
+        typingInput.setSelectionRange(end, end);
+      } catch (err) {}
+    }
+
+    function isEditingShortcut(e) {
+      if (!(e.ctrlKey || e.metaKey)) return false;
+      const k = e.key.toLowerCase();
+      return ["a", "x", "v", "z", "y"].includes(k);
+    }
+
+    function isBlockedPracticeKey(e) {
+      const blocked = [
+        "Backspace", "Delete",
+        "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+        "Home", "End", "PageUp", "PageDown",
+        "Insert"
+      ];
+      return blocked.includes(e.key) || isEditingShortcut(e);
+    }
+
+    function setCurrentLevel(level) {
+      currentLevel = Math.max(1, Math.min(5, level));
+      localStorage.setItem(DIFFICULTY_KEY, String(currentLevel));
+      updateAdaptivePanel();
+    }
+
+    function getWeakKeyCodes(limit = 5) {
+      const score = new Map();
+
+      for (const [key, count] of mistakeStats.expectedMistakes.entries()) {
+        if (String(key).startsWith("Key") || String(key).startsWith("Digit") || key === "Space" || key === "Comma" || key === "Period" || key === "Slash" || key === "Semicolon") {
+          score.set(key, (score.get(key) || 0) + count * 3);
+        }
+      }
+
+      for (const [code, count] of mistakeStats.actualMistakes.entries()) {
+        score.set(code, (score.get(code) || 0) + count);
+      }
+
+      const history = loadHistory();
+      for (const record of history.slice(0, 20)) {
+        const keyErrors = record.keyErrors || {};
+        for (const [code, count] of Object.entries(keyErrors)) {
+          score.set(code, (score.get(code) || 0) + count);
+        }
+      }
+
+      return [...score.entries()]
+        .filter(([code, count]) => code && count > 0 && keyLabelByCode.has(code))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([code]) => code);
+    }
+
+    function getWeakKeyLabels(limit = 5) {
+      return getWeakKeyCodes(limit).map(code => labelForCode(code));
+    }
+
+    function updateAdaptivePanel() {
+      const info = levelInfo[currentLevel];
+      difficultyLevelEl.textContent = `Level ${currentLevel}`;
+      difficultyNameEl.textContent = info.name;
+      levelGoalTextEl.textContent = `${info.goalAccuracy}% / WPM ${info.goalWpm}`;
+
+      const weak = getWeakKeyLabels(4);
+      weakKeysTextEl.textContent = weak.length ? weak.join(" ") : "暂无";
+    }
+
+    function randomPick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function codeToPracticeChar(code) {
+      const label = labelForCode(code);
+      if (label === "Space") return " ";
+      if (label === "Comma") return ",";
+      if (label === "Period") return ".";
+      if (label === "Slash") return "/";
+      if (label === "Backspace" || label === "Enter" || label === "Shift" || label === "Ctrl" || label === "Alt") return "";
+      return label.length === 1 ? label.toLowerCase() : "";
+    }
+
+    function generateWeakKeyText(level = currentLevel) {
+      const weakCodes = getWeakKeyCodes(5);
+      if (!weakCodes.length) {
+        return randomPick(levelTextBank[level] || levelTextBank[1]);
+      }
+
+      const chunks = [];
+
+      for (const code of weakCodes) {
+        const ch = codeToPracticeChar(code);
+        if (!ch) continue;
+
+        const neighborCodes = (neighborByCode[code] || []).slice(0, 3);
+        const neighbors = neighborCodes.map(codeToPracticeChar).filter(Boolean);
+
+        if (neighbors.length) {
+          chunks.push(`${ch}${neighbors[0]}${ch}${neighbors[0]} ${neighbors[0]}${ch}${neighbors[0]}${ch}`);
+          if (neighbors[1]) chunks.push(`${ch}${neighbors[1]} ${neighbors[1]}${ch} ${ch}${neighbors[1]}${ch}`);
+        }
+
+        chunks.push(`${ch}${ch} ${ch}${ch}${ch} ${ch}${ch}${ch}${ch}`);
+      }
+
+      const introByLevel = {
+        1: "slow focus",
+        2: "steady rhythm",
+        3: "careful accuracy",
+        4: "mix 123 and symbols",
+        5: "hard focus drill"
+      };
+
+      let text = `${introByLevel[level] || "focus drill"}: ${chunks.join(" ")}. `;
+
+      if (level >= 3) {
+        text += "Now repeat carefully, then speed up slowly. ";
+      }
+      if (level >= 4) {
+        text += "Add 123, 789, commas, periods, and question marks? ";
+      }
+      if (level >= 5) {
+        text += "Final round: keep accuracy above 97% while staying relaxed! ";
+      }
+
+      return text.trim();
+    }
+
+    function generateLevelText(level = currentLevel, useWeakKeys = false) {
+      if (useWeakKeys || level === 5) {
+        return generateWeakKeyText(level);
+      }
+
+      const base = randomPick(levelTextBank[level] || levelTextBank[1]);
+
+      if (level <= 2) return base;
+      if (level === 3) return base + " Watch uppercase letters, commas, and clear spacing.";
+      if (level === 4) return base + " Extra drill: 12, 34, 56, 78, 90.";
+      return generateWeakKeyText(level);
+    }
+
+    function setPracticeText(text) {
+      targetText = text;
+      resetPractice(true);
+      renderPractice();
+      updatePracticeStats();
+      updateAdaptivePanel();
+    }
+
+    function adjustDifficultyAfterFinish(stats) {
+      if (!autoLevelToggle.checked) return;
+
+      const info = levelInfo[currentLevel];
+      const mistakeRate = mistakeStats.attempts ? Math.round((mistakeStats.mistakes / mistakeStats.attempts) * 100) : 0;
+
+      const shouldLevelUp =
+        stats.accuracy >= info.goalAccuracy &&
+        stats.wpm >= info.goalWpm &&
+        mistakeRate <= 12 &&
+        currentLevel < 5;
+
+      const shouldLevelDown =
+        (stats.accuracy < 85 || mistakeRate >= 28) &&
+        currentLevel > 1;
+
+      if (shouldLevelUp) {
+        setCurrentLevel(currentLevel + 1);
+        showCorrectionNote(`表现达标，难度提升到 Level ${currentLevel}：${levelInfo[currentLevel].name}`);
+      } else if (shouldLevelDown) {
+        setCurrentLevel(currentLevel - 1);
+        showCorrectionNote(`错误偏多，难度降到 Level ${currentLevel}：${levelInfo[currentLevel].name}`);
+      } else {
+        updateAdaptivePanel();
+      }
+    }
+
+    function markFirstMistakePosition(pos) {
+      if (Number.isInteger(pos) && pos >= 0 && pos < targetText.length) {
+        firstMistakePositions.add(pos);
+      }
+    }
+
     function renderPractice() {
       const typed = typingInput.value;
       let html = "";
@@ -695,7 +1695,11 @@
         let cls = "char";
 
         if (i < typed.length) {
-          cls += typed[i] === targetChar ? " correct" : " wrong";
+          if (correctedPositions.has(i) && typed[i] === targetChar) {
+            cls += " corrected";
+          } else {
+            cls += typed[i] === targetChar ? " correct" : " wrong";
+          }
         } else if (i === typed.length) {
           cls += " current";
         }
@@ -720,22 +1724,223 @@
 
     function analyzeTyping() {
       const typed = typingInput.value;
-      let correct = 0;
-      let errors = 0;
+      let finalCorrect = 0;
+      let finalErrors = 0;
+      let firstTryCorrect = 0;
+      let firstTryErrors = 0;
 
       for (let i = 0; i < typed.length; i++) {
-        if (typed[i] === targetText[i]) correct++;
-        else errors++;
+        const finalIsCorrect = typed[i] === targetText[i];
+        if (finalIsCorrect) finalCorrect++;
+        else finalErrors++;
+
+        // 统计口径：只看第一次尝试。
+        // 这个位置第一次打错过，即使后来改正成功，也仍然计入错误率，不计入正确率。
+        if (firstMistakePositions.has(i)) {
+          firstTryErrors++;
+        } else if (finalIsCorrect) {
+          firstTryCorrect++;
+        } else {
+          firstTryErrors++;
+        }
       }
 
       const typedLen = typed.length;
       const elapsed = getElapsedSeconds();
       const minutes = elapsed / 60;
-      const wpm = minutes > 0 ? Math.round((correct / 5) / minutes) : 0;
-      const accuracy = typedLen > 0 ? Math.round((correct / typedLen) * 100) : 100;
+      const wpm = minutes > 0 ? Math.round((finalCorrect / 5) / minutes) : 0;
+      const accuracy = typedLen > 0 ? Math.round((firstTryCorrect / typedLen) * 100) : 100;
       const progress = targetText.length > 0 ? Math.min(100, Math.round((typedLen / targetText.length) * 100)) : 0;
 
-      return { typed, typedLen, correct, errors, elapsed, wpm, accuracy, progress };
+      return {
+        typed,
+        typedLen,
+        correct: firstTryCorrect,
+        errors: firstTryErrors,
+        finalCorrect,
+        finalErrors,
+        firstTryCorrect,
+        firstTryErrors,
+        elapsed,
+        wpm,
+        accuracy,
+        progress
+      };
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function saveHistory(history) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 100)));
+    }
+
+    function formatDateTime(ts) {
+      const d = new Date(ts);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function getCorrectionRate(success = correctionSuccessCount, mistakes = mistakeStats.mistakes) {
+      return mistakes > 0 ? Math.round((success / mistakes) * 100) : 0;
+    }
+
+    function updateCorrectionRateDisplay() {
+      correctionRateEl.textContent = getCorrectionRate() + "%";
+    }
+
+    function buildHistoryMarkup(text, typed, correctedPosArray = []) {
+      const correctedSet = new Set(correctedPosArray || []);
+      let result = "";
+
+      for (let i = 0; i < text.length; i++) {
+        const targetChar = text[i];
+        let cls = "char";
+
+        if (i < typed.length) {
+          if (correctedSet.has(i) && typed[i] === targetChar) {
+            cls += " corrected";
+          } else {
+            cls += typed[i] === targetChar ? " correct" : " wrong";
+          }
+        }
+
+        const shown = targetChar === " " ? "&nbsp;" : escapeHtml(targetChar);
+        result += `<span class="${cls}">${shown}</span>`;
+      }
+
+      return result;
+    }
+
+    function buildAnnotatedExportText(text, typed, correctedPosArray = []) {
+      const correctedSet = new Set(correctedPosArray || []);
+      let out = "";
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (i < typed.length) {
+          if (correctedSet.has(i) && typed[i] === ch) {
+            out += `{改:${ch}}`;
+          } else if (typed[i] !== ch) {
+            out += `{错:${ch}}`;
+          } else {
+            out += ch;
+          }
+        } else {
+          out += ch;
+        }
+      }
+
+      return out;
+    }
+
+    function addPracticeHistory(stats) {
+      const history = loadHistory();
+
+      const record = {
+        id: Date.now(),
+        time: Date.now(),
+        wpm: stats.wpm,
+        accuracy: stats.accuracy,
+        errors: stats.errors,
+        elapsed: Math.floor(stats.elapsed),
+        correctionSuccess: correctionSuccessCount,
+        correctionRate: getCorrectionRate(),
+        attempts: mistakeStats.attempts,
+        mistakes: mistakeStats.mistakes,
+        mistakeRate: mistakeStats.attempts ? Math.round((mistakeStats.mistakes / mistakeStats.attempts) * 100) : 0,
+        text: targetText,
+        keyErrors: Object.fromEntries(mistakeStats.expectedMistakes),
+        typed: stats.typed,
+        correctedPositions: [...correctedPositions],
+        firstMistakePositions: [...firstMistakePositions],
+        historyMarkup: buildHistoryMarkup(targetText, stats.typed, [...correctedPositions]),
+        annotatedText: buildAnnotatedExportText(targetText, stats.typed, [...correctedPositions])
+      };
+
+      history.unshift(record);
+      saveHistory(history);
+      renderPracticeHistory();
+    }
+
+    function renderPracticeHistory() {
+      const history = loadHistory();
+
+      if (!history.length) {
+        historySummary.textContent = "完成一轮练习后会自动记录。练习文本中：红色=最终打错，黄色=曾打错但后来改正。正确率采用首错口径：第一次打错后即使改正，也不算正确。历史记录保存在本机浏览器中，不会上传。";
+        historyBody.innerHTML = '<tr><td colspan="9" class="empty">还没有练习历史</td></tr>';
+        return;
+      }
+
+      const avgWpm = Math.round(history.reduce((sum, r) => sum + (r.wpm || 0), 0) / history.length);
+      const avgAccuracy = Math.round(history.reduce((sum, r) => sum + (r.accuracy || 0), 0) / history.length);
+      const bestWpm = Math.max(...history.map(r => r.wpm || 0));
+
+      historySummary.textContent = `共 ${history.length} 条记录｜平均 WPM ${avgWpm}｜最高 WPM ${bestWpm}｜平均正确率 ${avgAccuracy}%`;
+
+      historyBody.innerHTML = history.map(r => `
+        <tr>
+          <td>${formatDateTime(r.time)}</td>
+          <td><strong>${r.wpm}</strong></td>
+          <td>${r.accuracy}%</td>
+          <td>${r.errors}</td>
+          <td>${r.elapsed}s</td>
+          <td>${r.correctionSuccess || 0}</td>
+          <td>${r.correctionRate ?? (r.mistakes ? Math.round(((r.correctionSuccess || 0) / r.mistakes) * 100) : 0)}%</td>
+          <td>${r.mistakeRate || 0}%</td>
+          <td>
+            <div class="history-text" title="${escapeHtml(r.annotatedText || r.text || "")}">
+              ${r.historyMarkup || `<div class="text-snippet">${escapeHtml(r.text || "")}</div>`}
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function exportHistoryCsv() {
+      const history = loadHistory();
+      const rows = [
+        ["time", "wpm", "first_try_accuracy", "first_try_errors", "elapsed_seconds", "correction_success", "correction_rate", "attempts", "mistakes", "mistake_rate", "weak_key_errors", "text"],
+        ...history.map(r => [
+          formatDateTime(r.time),
+          r.wpm,
+          r.accuracy,
+          r.errors,
+          r.elapsed,
+          r.correctionSuccess || 0,
+          r.correctionRate ?? (r.mistakes ? Math.round(((r.correctionSuccess || 0) / r.mistakes) * 100) : 0),
+          r.attempts || 0,
+          r.mistakes || 0,
+          r.mistakeRate || 0,
+          Object.entries(r.keyErrors || {}).map(([k,v]) => `${labelForCode(k)}:${v}`).join(" "),
+          r.annotatedText || r.text || ""
+        ])
+      ];
+
+      const csv = rows.map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "typing-practice-history.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function scheduleAutoNextText() {
+      if (!autoNextToggle.checked) return;
+
+      clearTimeout(autoNextTimer);
+      autoNextTimer = setTimeout(() => {
+        const shouldUseWeakText = currentLevel >= 5 || getWeakKeyCodes(3).length >= 2;
+        setPracticeText(generateLevelText(currentLevel, shouldUseWeakText));
+      }, 2000);
     }
 
     function updatePracticeStats() {
@@ -751,14 +1956,32 @@
         finished = true;
         clearInterval(timerId);
         finishBox.style.display = "block";
-        finishBox.textContent = `完成！WPM：${s.wpm}，正确率：${s.accuracy}%，错误数：${s.errors}，用时：${Math.floor(s.elapsed)} 秒。`;
+        finishBox.textContent = `完成！WPM：${s.wpm}，首错口径正确率：${s.accuracy}%，首错错误数：${s.errors}，用时：${Math.floor(s.elapsed)} 秒。`;
+
+        if (!sessionSaved) {
+          sessionSaved = true;
+          addPracticeHistory(s);
+          adjustDifficultyAfterFinish(s);
+
+          if (autoNextToggle.checked) {
+            finishBox.textContent += "  2 秒后自动进入下一段。";
+            scheduleAutoNextText();
+          }
+        }
       }
     }
 
     function resetPractice(keepText = true) {
+      clearTimeout(autoNextTimer);
+      autoNextTimer = null;
       typingInput.value = "";
       startedAt = null;
       finished = false;
+      correctionPending = null;
+      sessionSaved = false;
+      correctedPositions.clear();
+      firstMistakePositions.clear();
+      hideCorrectionNote();
       clearInterval(timerId);
       timerId = null;
       finishBox.style.display = "none";
@@ -766,6 +1989,7 @@
       renderPractice();
       updatePracticeStats();
       typingInput.focus();
+      moveCaretToEnd();
     }
 
     function resetMistakeStats() {
@@ -776,23 +2000,17 @@
       mistakeStats.actualMistakes.clear();
       mistakeStats.areaMistakes.clear();
       mistakeStats.confusionPairs.clear();
+      correctionSuccessCount = 0;
+      correctionSuccessEl.textContent = "0";
+      updateCorrectionRateDisplay();
       renderMistakeAnalysis();
       updateKeyboardHeat();
     }
 
-    function recordPracticeMistake(e) {
-      if (document.activeElement !== typingInput) return;
-      if (!isPrintableKey(e)) return;
-
-      const pos = typingInput.selectionStart;
-      if (pos === null || pos >= targetText.length) return;
-
-      const expectedChar = targetText[pos];
-      const actualChar = e.key;
+    function recordPracticeAttempt(expectedChar, actualChar, actualCode) {
       const expectedCode = expectedCodeForChar(expectedChar);
       const expectedLabel = labelForChar(expectedChar);
       const actualLabel = labelForChar(actualChar);
-      const actualCode = e.code || "Unknown";
 
       mistakeStats.attempts++;
       inc(mistakeStats.expectedAttempts, expectedCode || expectedLabel);
@@ -810,9 +2028,95 @@
           mistakeStats.confusionPairs.set(pairKey, { expected: expectedLabel, actual: actualLabel, count: 0 });
         }
         mistakeStats.confusionPairs.get(pairKey).count++;
+
+        alertMistake(expectedLabel, actualLabel, expectedCode, actualCode);
       }
 
       renderMistakeAnalysis();
+      return { expectedCode, expectedLabel, actualLabel };
+    }
+
+    function insertPracticeChar(ch) {
+      const pos = typingInput.value.length;
+      typingInput.value += ch;
+      typingInput.dispatchEvent(new Event("input", { bubbles: true }));
+      moveCaretToEnd();
+      return pos;
+    }
+
+    function handleCorrectionPracticeKey(e) {
+      if (document.activeElement !== typingInput) return false;
+      if (!isPrintableKey(e)) return false;
+      if (!correctionToggle.checked) return false;
+
+      const pos = typingInput.selectionStart;
+      if (pos === null || pos >= targetText.length) return false;
+
+      const expectedChar = targetText[pos];
+      const actualChar = e.key;
+      const actualCode = e.code || "Unknown";
+
+      // 正在等待一次改正：这一次无论对错都消耗机会。
+      if (correctionPending) {
+        e._allowStats = true;
+        e.preventDefault();
+
+        const pending = correctionPending;
+        correctionPending = null;
+        hideCorrectionNote();
+
+        if (actualChar === pending.expectedChar) {
+          const insertedPos = insertPracticeChar(actualChar);
+          correctedPositions.add(insertedPos);
+          correctionSuccessCount++;
+          correctionSuccessEl.textContent = correctionSuccessCount;
+          updateCorrectionRateDisplay();
+          showCorrectionNote(`已改正：${labelForChar(actualChar)}`);
+          renderPractice();
+        } else {
+          recordPracticeAttempt(pending.expectedChar, actualChar, actualCode);
+          insertPracticeChar(actualChar);
+          showCorrectionNote("改正机会已用完，按第二次结果继续。");
+        }
+
+        return true;
+      }
+
+      // 第一次打错：记录错误，但不写入文本，给一次改正机会。
+      if (actualChar !== expectedChar) {
+        e._allowStats = true;
+        e.preventDefault();
+
+        markFirstMistakePosition(pos);
+        recordPracticeAttempt(expectedChar, actualChar, actualCode);
+
+        correctionPending = {
+          pos,
+          expectedChar,
+          expectedCode: expectedCodeForChar(expectedChar),
+          expectedLabel: labelForChar(expectedChar)
+        };
+
+        showCorrectionNote(`改正机会：请按 ${labelForChar(expectedChar)} 继续。`, true);
+        return true;
+      }
+
+      return false;
+    }
+
+    function recordPracticeMistake(e) {
+      if (document.activeElement !== typingInput) return;
+      if (!isPrintableKey(e)) return;
+      if (correctionToggle.checked) return;
+
+      const pos = typingInput.selectionStart;
+      if (pos === null || pos >= targetText.length) return;
+
+      const expectedChar = targetText[pos];
+      const actualChar = e.key;
+      const actualCode = e.code || "Unknown";
+
+      recordPracticeAttempt(expectedChar, actualChar, actualCode);
     }
 
     function getSortedRows() {
@@ -927,6 +2231,7 @@
       practiceAttemptsEl.textContent = attempts;
       practiceMistakesEl.textContent = mistakes;
       mistakeRateEl.textContent = rate + "%";
+      updateCorrectionRateDisplay();
 
       const areas = [...mistakeStats.areaMistakes.entries()].sort((a, b) => b[1] - a[1]);
       const worstArea = areas[0]?.[0] || "-";
@@ -982,6 +2287,7 @@
     }
 
     window.addEventListener("keydown", (e) => {
+      if (e.defaultPrevented && !e._allowStats) return;
       if (paused) return;
       if (ignoreRepeat.checked && e.repeat) return;
 
@@ -1002,6 +2308,77 @@
       recordPracticeMistake(e);
     });
 
+
+    typingInput.addEventListener("keydown", (e) => {
+      if (handleCorrectionPracticeKey(e)) return;
+
+      if (isBlockedPracticeKey(e)) {
+        e.preventDefault();
+        showLockNote("防回退模式：不能删除、粘贴、撤销、剪切或移动光标修改前面的内容。");
+        moveCaretToEnd();
+        return;
+      }
+
+      if (typingInput.selectionStart !== typingInput.value.length || typingInput.selectionEnd !== typingInput.value.length) {
+        e.preventDefault();
+        showLockNote("请从末尾继续输入，不能回到前面修改。");
+        moveCaretToEnd();
+      }
+    });
+
+    typingInput.addEventListener("beforeinput", (e) => {
+      const blockedTypes = [
+        "deleteContentBackward",
+        "deleteContentForward",
+        "deleteWordBackward",
+        "deleteWordForward",
+        "deleteByCut",
+        "insertFromPaste",
+        "insertFromDrop",
+        "historyUndo",
+        "historyRedo"
+      ];
+
+      if (blockedTypes.includes(e.inputType)) {
+        e.preventDefault();
+        showLockNote("防回退模式：不能删除、粘贴、撤销或修改前面的内容。");
+        moveCaretToEnd();
+        return;
+      }
+
+      if (
+        typingInput.selectionStart !== typingInput.value.length ||
+        typingInput.selectionEnd !== typingInput.value.length
+      ) {
+        e.preventDefault();
+        showLockNote("请从末尾继续输入，不能回到前面修改。");
+        moveCaretToEnd();
+      }
+    });
+
+    typingInput.addEventListener("paste", (e) => {
+      e.preventDefault();
+      showLockNote("防回退模式：不能粘贴，必须手动打字。");
+      moveCaretToEnd();
+    });
+
+    typingInput.addEventListener("cut", (e) => {
+      e.preventDefault();
+      showLockNote("防回退模式：不能剪切或删除内容。");
+      moveCaretToEnd();
+    });
+
+    typingInput.addEventListener("drop", (e) => {
+      e.preventDefault();
+      showLockNote("防回退模式：不能拖入文本。");
+      moveCaretToEnd();
+    });
+
+    typingInput.addEventListener("click", moveCaretToEnd);
+    typingInput.addEventListener("focus", moveCaretToEnd);
+    typingInput.addEventListener("select", moveCaretToEnd);
+    typingInput.addEventListener("keyup", moveCaretToEnd);
+
     typingInput.addEventListener("input", () => {
       startTimerOnce();
       renderPractice();
@@ -1010,7 +2387,17 @@
 
     document.getElementById("restartPracticeBtn").addEventListener("click", () => resetPractice(true));
     document.getElementById("clearInputBtn").addEventListener("click", () => resetPractice(true));
-    document.getElementById("randomTextBtn").addEventListener("click", () => resetPractice(false));
+    document.getElementById("randomTextBtn").addEventListener("click", () => {
+      setPracticeText(generateLevelText(currentLevel, false));
+    });
+
+    weakTextBtn.addEventListener("click", () => {
+      setPracticeText(generateLevelText(currentLevel, true));
+    });
+
+    levelUpTextBtn.addEventListener("click", () => {
+      setPracticeText(generateLevelText(Math.min(5, currentLevel + 1), false));
+    });
 
     document.getElementById("useCustomBtn").addEventListener("click", () => {
       const text = customText.value.trim();
@@ -1091,10 +2478,20 @@
 
     heatMode.addEventListener("change", updateKeyboardHeat);
 
+    clearHistoryBtn.addEventListener("click", () => {
+      if (!confirm("确定要清空所有练习历史吗？")) return;
+      localStorage.removeItem(HISTORY_KEY);
+      renderPracticeHistory();
+    });
+
+    exportHistoryBtn.addEventListener("click", exportHistoryCsv);
+
     buildKeyboard();
     renderPractice();
     renderKeyStats();
     renderMistakeAnalysis();
+    renderPracticeHistory();
+    updateAdaptivePanel();
     updatePracticeStats();
   </script>
 </body>
