@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>打字练习 + 统一键盘热力分析 + 真正铺满版</title>
+  <title>打字练习 + 统一键盘热力分析 + 纯英文句子版</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -644,6 +644,12 @@
       }
     }
 
+
+    /* 防崩溃：错误提示最多保留 3 个，减少 DOM 堆积和动画压力 */
+    #toastStack {
+      pointer-events: none;
+    }
+
     footer {
       color: #6b7280;
       font-size: 13px;
@@ -787,8 +793,8 @@
 <body>
   <div class="app">
     <header>
-      <h1>打字练习 + 统一键盘热力分析 + 真正铺满版</h1>
-      <p class="hint">练习输入框已开启防回退模式，并支持一次改正机会。第一次打错会计入错误率；后续改正成功不会把该位置算作正确率。</p>
+      <h1>打字练习 + 统一键盘热力分析 + 纯英文句子版</h1>
+      <p class="hint">练习输入框已开启防回退模式，并支持一次改正机会。第一次打错会计入错误率；后续改正成功不会把该位置算作正确率。普通练习文本只会从真实英文句子和规范语法模板中生成，不再出现随机字母块或伪造单词；易错键专项需要手动点击按钮进入。</p>
     </header>
 
     <main>
@@ -824,8 +830,8 @@
 
           <div class="controls">
             <button id="restartPracticeBtn">重新开始练习</button>
-            <button id="randomTextBtn" class="secondary">换一段同级文本</button>
-            <button id="weakTextBtn" class="secondary">生成易错键专项文本</button>
+            <button id="randomTextBtn" class="secondary">随机生成同级文本</button>
+            <button id="weakTextBtn" class="secondary">手动生成易错键专项文本</button>
             <button id="levelUpTextBtn" class="secondary">生成高一级文本</button>
             <button id="clearInputBtn" class="secondary">清空输入</button>
             <label class="toggle">
@@ -1043,7 +1049,7 @@
       </div>
 
       <footer>
-        易错分析只统计“练习输入框”里的可见字符按键。练习框开启防回退模式，不能删除、粘贴、撤销或移动光标修改前文。打错时会新增放大的提示条；默认开启“一次改正”。统计采用首错口径：第一次打错计入错误率，改正成功只计入改正率，不会反过来提高正确率。完成后会自动切到下一段。
+        易错分析只统计“练习输入框”里的可见字符按键。练习框开启防回退模式，不能删除、粘贴、撤销或移动光标修改前文。打错时会新增放大的提示条；默认开启“一次改正”。统计采用首错口径：第一次打错计入错误率，改正成功只计入改正率，不会反过来提高正确率。完成后会自动随机生成下一段语法规范的普通英文句子；易错键专项需要手动点击按钮进入。
       </footer>
     </main>
   </div>
@@ -1093,6 +1099,15 @@
       ]
     };
 
+    const normalLevelTextBank = {
+      ...levelTextBank,
+      5: [
+        "Hard mode: quick shifts, mixed symbols, numbers 1024 and 4096, plus punctuation!",
+        "Final drill: speed is useful only when your accuracy remains stable.",
+        "Advanced typing requires calm hands, stable rhythm, clear spacing, numbers 2048 and 4096, plus punctuation!"
+      ]
+    };
+
     const neighborByCode = {
       KeyQ: ["KeyW","KeyA"], KeyW: ["KeyQ","KeyE","KeyS"], KeyE: ["KeyW","KeyR","KeyD"], KeyR: ["KeyE","KeyT","KeyF"], KeyT: ["KeyR","KeyY","KeyG"],
       KeyY: ["KeyT","KeyU","KeyH"], KeyU: ["KeyY","KeyI","KeyJ"], KeyI: ["KeyU","KeyO","KeyK"], KeyO: ["KeyI","KeyP","KeyL"], KeyP: ["KeyO","BracketLeft","Semicolon"],
@@ -1137,6 +1152,8 @@
     const DIFFICULTY_KEY = "typingPracticeDifficulty.v1";
     let currentLevel = Number(localStorage.getItem(DIFFICULTY_KEY) || "1");
     currentLevel = Math.max(1, Math.min(5, currentLevel));
+    let analysisRenderQueued = false;
+    const MAX_TOASTS = 3;
     let autoNextTimer = null;
 
     const practiceTextEl = document.getElementById("practiceText");
@@ -1632,17 +1649,190 @@
       return text.trim();
     }
 
+    const englishSentenceBank = {
+      1: [
+        "The student writes a short message.",
+        "The reader checks a clear sentence.",
+        "A calm writer builds a daily habit.",
+        "The teacher opens a small notebook.",
+        "The friend reads the next line.",
+        "A careful student follows the lesson.",
+        "The player keeps a steady rhythm.",
+        "The writer uses a simple plan.",
+        "The team shares a useful answer.",
+        "A quiet reader finds the correct word.",
+        "The artist draws a bright picture.",
+        "The engineer checks the small screen."
+      ],
+      2: [
+        "The careful student writes a short message before lunch.",
+        "Many readers check the answer after the lesson.",
+        "A calm writer builds a useful habit during practice.",
+        "The teacher explains the method in a clear voice.",
+        "The team solves the problem with a simple plan.",
+        "A patient player keeps a steady rhythm every morning.",
+        "The engineer tests the system before the meeting.",
+        "The reader finds the correct answer in the notebook.",
+        "The artist creates a bright picture near the window.",
+        "The writer improves the sentence with careful practice.",
+        "The student learns the method and checks the result.",
+        "The team follows the plan and finishes the task."
+      ],
+      3: [
+        "The careful student writes a short message, and the teacher checks it.",
+        "A calm writer builds a daily habit, but speed still takes time.",
+        "The team solves the problem because the plan is clear.",
+        "Do you want to improve your typing speed today?",
+        "The reader checks the sentence, then writes the answer carefully.",
+        "The engineer tests the system, and the result looks stable.",
+        "The teacher explains the rule while the student takes notes.",
+        "The player keeps a steady rhythm, so the practice feels easier.",
+        "A patient writer reads the paragraph before editing it.",
+        "The lesson is simple, but the habit requires daily practice.",
+        "The message is short, clear, and easy to read.",
+        "The notebook is open, and the student is ready."
+      ],
+      4: [
+        "The careful student writes a short message; the score is 92%.",
+        "The engineer checks the backup code before the system starts.",
+        "The team reviews task 24, then updates the simple plan.",
+        "Do you want to finish lesson 18 before dinner?",
+        "The writer edits the paragraph; the final score is 96%.",
+        "The reader checks page 42 and writes a clear answer.",
+        "The teacher saves file A12, then opens the next message.",
+        "The player repeats round 7 because the rhythm feels better.",
+        "The project needs 30 minutes of focused practice today.",
+        "The student checks the screen, the note, and the final answer.",
+        "The system reports 98% accuracy after the second test.",
+        "The notebook has 15 lines, 3 notes, and 1 clear plan."
+      ],
+      5: [
+        "The careful student writes a short message, while the backup code is A42.",
+        "The engineer checks the system at 09:30, and the final score is 97%.",
+        "The writer edits a clear paragraph, then reviews file K18 before lunch.",
+        "The team finishes task 2048 because the plan is simple and stable.",
+        "The reader compares two answers, marks page 16, and saves the note.",
+        "The teacher opens the report, checks item Q27, and sends the message.",
+        "The player keeps a steady rhythm for 60 seconds, but accuracy matters most.",
+        "The project uses version B19, while the old file stays in the archive.",
+        "The student reviews 12 questions, corrects 3 mistakes, and improves the score.",
+        "The system saves the result at 18:45, then starts the next test.",
+        "The writer checks the title, the date, the code, and the final sentence.",
+        "The engineer tests backup C56 because the main system needs a stable result."
+      ]
+    };
+
+    const grammarTemplates = {
+      simple: [
+        ["The student", "writes", "a clear sentence"],
+        ["The reader", "checks", "the correct answer"],
+        ["The writer", "edits", "a short message"],
+        ["The teacher", "explains", "a useful lesson"],
+        ["The engineer", "tests", "the small system"],
+        ["The player", "keeps", "a steady rhythm"],
+        ["The team", "follows", "a simple plan"],
+        ["The artist", "creates", "a bright picture"],
+        ["The friend", "shares", "a helpful idea"],
+        ["The worker", "finishes", "the next task"]
+      ],
+      plural: [
+        ["Many students", "write", "clear answers"],
+        ["Careful readers", "check", "short messages"],
+        ["Good writers", "edit", "simple sentences"],
+        ["Patient teachers", "explain", "useful lessons"],
+        ["Strong teams", "follow", "stable plans"],
+        ["Skilled players", "keep", "steady rhythms"]
+      ],
+      place: [
+        ["The student", "reads", "in the library"],
+        ["The writer", "works", "near the window"],
+        ["The teacher", "waits", "in the classroom"],
+        ["The engineer", "checks the screen", "before the meeting"],
+        ["The player", "practices", "after dinner"],
+        ["The reader", "takes notes", "in the morning"]
+      ],
+      compound: [
+        ["The student writes a clear sentence", "and", "the teacher checks it"],
+        ["The reader finds the answer", "but", "the lesson takes time"],
+        ["The writer edits the message", "so", "the result is easier to read"],
+        ["The engineer checks the system", "because", "the project needs a stable result"],
+        ["The player keeps a steady rhythm", "while", "the timer continues"]
+      ],
+      question: [
+        "Do you want to improve your typing speed?",
+        "Do you need a short practice session today?",
+        "Can the student finish the lesson before dinner?",
+        "Can the writer edit the message carefully?",
+        "Should the team check the final answer again?",
+        "Will the reader find the correct sentence?"
+      ]
+    };
+
+    function pickFrom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function makeTemplateSentence(level) {
+      if (level <= 1) {
+        const t = pickFrom(grammarTemplates.simple);
+        return `${t[0]} ${t[1]} ${t[2]}.`;
+      }
+
+      if (level === 2) {
+        const group = Math.random() < 0.5 ? grammarTemplates.simple : grammarTemplates.plural;
+        const t = pickFrom(group);
+        return `${t[0]} ${t[1]} ${t[2]}.`;
+      }
+
+      if (level === 3) {
+        const type = pickFrom(["simple", "plural", "place", "compound", "question"]);
+        if (type === "question") return pickFrom(grammarTemplates.question);
+        if (type === "compound") {
+          const t = pickFrom(grammarTemplates.compound);
+          return `${t[0]} ${t[1]} ${t[2]}.`;
+        }
+        const t = pickFrom(grammarTemplates[type]);
+        return `${t[0]} ${t[1]} ${t[2]}.`;
+      }
+
+      if (level === 4) {
+        if (Math.random() < 0.35) {
+          return pickFrom(englishSentenceBank[4]);
+        }
+        const t = pickFrom(grammarTemplates.compound);
+        return `${t[0]}; ${t[2]}.`;
+      }
+
+      if (Math.random() < 0.5) {
+        return pickFrom(englishSentenceBank[5]);
+      }
+      return pickFrom(englishSentenceBank[4]);
+    }
+
+    function generateRandomPracticeText(level = currentLevel) {
+      const sentenceCount = level <= 1 ? 2 : level === 2 ? 3 : level === 3 ? 4 : level === 4 ? 4 : 5;
+      const pool = englishSentenceBank[level] || englishSentenceBank[1];
+      const parts = [];
+
+      for (let i = 0; i < sentenceCount; i++) {
+        if (Math.random() < 0.6) {
+          parts.push(pickFrom(pool));
+        } else {
+          parts.push(makeTemplateSentence(level));
+        }
+      }
+
+      return parts.join(" ").replace(/\s+/g, " ").trim();
+    }
+
     function generateLevelText(level = currentLevel, useWeakKeys = false) {
-      if (useWeakKeys || level === 5) {
+      // 只有手动点击“生成易错键专项文本”时，才会进入易错键专项。
+      if (useWeakKeys) {
         return generateWeakKeyText(level);
       }
 
-      const base = randomPick(levelTextBank[level] || levelTextBank[1]);
-
-      if (level <= 2) return base;
-      if (level === 3) return base + " Watch uppercase letters, commas, and clear spacing.";
-      if (level === 4) return base + " Extra drill: 12, 34, 56, 78, 90.";
-      return generateWeakKeyText(level);
+      // 普通练习只使用真实英文词和规范语法模板，不生成随机字母块。
+      return generateRandomPracticeText(level);
     }
 
     function setPracticeText(text) {
@@ -1938,8 +2128,8 @@
 
       clearTimeout(autoNextTimer);
       autoNextTimer = setTimeout(() => {
-        const shouldUseWeakText = currentLevel >= 5 || getWeakKeyCodes(3).length >= 2;
-        setPracticeText(generateLevelText(currentLevel, shouldUseWeakText));
+        // 自动下一段只切普通文本；易错键专项必须手动点击按钮。
+        setPracticeText(generateLevelText(currentLevel, false));
       }, 2000);
     }
 
@@ -2007,6 +2197,22 @@
       updateKeyboardHeat();
     }
 
+    function scheduleMistakeAnalysisRender() {
+      if (analysisRenderQueued) return;
+      analysisRenderQueued = true;
+
+      requestAnimationFrame(() => {
+        analysisRenderQueued = false;
+        renderMistakeAnalysis();
+      });
+    }
+
+    function trimToastStack() {
+      while (toastStack.children.length > MAX_TOASTS) {
+        toastStack.removeChild(toastStack.firstElementChild);
+      }
+    }
+
     function recordPracticeAttempt(expectedChar, actualChar, actualCode) {
       const expectedCode = expectedCodeForChar(expectedChar);
       const expectedLabel = labelForChar(expectedChar);
@@ -2032,7 +2238,7 @@
         alertMistake(expectedLabel, actualLabel, expectedCode, actualCode);
       }
 
-      renderMistakeAnalysis();
+      scheduleMistakeAnalysisRender();
       return { expectedCode, expectedLabel, actualLabel };
     }
 
